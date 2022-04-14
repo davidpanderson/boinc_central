@@ -31,7 +31,6 @@ require_once("../inc/cache.inc");
 require_once("../inc/uotd.inc");
 require_once("../inc/sanitize_html.inc");
 require_once("../inc/text_transform.inc");
-require_once("../project/project.inc");
 require_once("../inc/bootstrap.inc");
 
 $config = get_config();

@@ -15,6 +15,8 @@ require_once("../inc/util.inc");
 define("PROJECT", "BOINC Central");
 define("COPYRIGHT_HOLDER", "UC Berkeley");
 
+$submit_urls = ['Autodock' => 'autodock.php'];
+
 //-------------- URLs and directories
 
 $master_url = parse_config(get_config(), "<master_url>");
@@ -65,6 +67,7 @@ define("RPC_DEBUG", false);
     // Enables PHP error messages in public Web RPCs
 define("TERMSOFUSE_FILE", "../../terms_of_use.txt");
     // Defines the location of the terms of use file. Default location is in the project directory.
+define("REMOTE_JOB_SUBMISSION", true);
 
 //-------------- Project-specific preferences
 
@@ -114,6 +117,81 @@ function make_php_mailer() {
 
 //-------------- Header and footer
 
+function navbar(
+    $url_prefix,
+        // prefix for links; needed for pages not in top dir
+    $user,
+        // logged-in user, if any
+    $fixed=false,
+        // if true, navbar is fixed at top of page.
+        // NOTE: if you do this, you must set a global var $fixed_navbar
+        // to true at compile time
+        // (it needs to be set when page_head() is called).
+    $inverse=false
+        // white on black?
+) {
+    global $master_url;
+
+    $brand = "<a class=\"navbar-brand\" href=$master_url>".PROJECT."</a>";
+    navbar_start($brand, $fixed, $inverse);
+
+    $x = array();
+    if ($user) {
+        $x[] = array(tra("Account"), $url_prefix.USER_HOME);
+        $x[] = array(tra("Join"), $url_prefix."join.php");
+        $x[] = array(tra("Preferences"), $url_prefix."prefs.php?subset=project");
+    }
+    $x[] = array(tra("About %1", PROJECT), $url_prefix."about.php");
+    $x[] = array(tra("Help"), $url_prefix."welcome.php");
+    navbar_menu(tra("Project"), $x);
+
+    if (NO_COMPUTING) {
+        // this is for projects that don't do computing, e.g. BOSSA-based
+        //
+        if (defined('BOSSA')) {
+            navbar_menu(tra("Participate"), array(
+                array(tra("Do work"), $url_prefix."bossa_apps.php"),
+            ));
+        }
+    } else {
+        $x = array(
+            array(tra("Preferences"), $url_prefix."prefs.php?subset=global"),
+            array(tra("Server status"), $url_prefix."server_status.php"),
+            array(tra("Credit statistics"), $url_prefix."stats.php"),
+            array(tra("Applications"), $url_prefix."apps.php"),
+            array(tra("GPU models"), $url_prefix."gpu_list.php"),
+            array(tra("CPU models"), $url_prefix."cpu_list.php"),
+            array(tra("Computer types"), $url_prefix."host_stats.php"),
+        );
+        if (defined('REMOTE_JOB_SUBMISSION') && REMOTE_JOB_SUBMISSION) {
+            if ($user && BoincUserSubmit::lookup_userid($user->id)) {
+                $x[] = array("Job submission", $url_prefix."submit.php");
+                $x[] = ["File sandbox", "sandbox.php"];
+            }
+        }
+        navbar_menu(tra("Computing"), $x);
+    }
+
+    navbar_menu(tra("Community"), array(
+        array(tra("Message boards"), $url_prefix."forum_index.php"),
+        //array(tra("Questions and Answers"), $url_prefix."forum_help_desk.php"),
+        array(tra("Teams"), $url_prefix."team.php", tra("create or join a team")),
+        array(tra("Profiles"), $url_prefix."profile_menu.php"),
+        array(tra("Preferences"), $url_prefix."edit_forum_preferences_form.php"),
+        array(tra("User search"), $url_prefix."user_search.php"),
+        array(tra("User of the day"), $url_prefix."uotd.php"),
+        array(tra("Certificate"), $url_prefix.cert_filename(), "", "_blank"),
+    ));
+    navbar_menu(tra("Site"), array(
+        array(tra("Site search"), $url_prefix."site_search.php"),
+        array(tra("Languages"), $url_prefix."language_select.php")
+    ));
+
+    // add your own menu here if you want
+
+    navbar_right($user);
+    navbar_end();
+}
 // Put your project title and logo here
 // If you include any links, prepend URL with $prefix
 // if you need to open divs here close them in project_footer()
@@ -122,7 +200,7 @@ function project_banner($title, $prefix, $is_main) {
     if ($is_main) {
         //echo '<img class="img-responsive" style="width:100%" src="img/water.jpg">';
     }
-    sample_navbar(secure_url_base(), get_logged_in_user(false), false);
+    navbar(secure_url_base(), get_logged_in_user(false), false);
     if ($title) {
         echo "<h2>$title</h2>\n";
     }
