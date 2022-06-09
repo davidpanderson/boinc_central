@@ -14,6 +14,17 @@ function form() {
     page_tail();
 }
 
+class AutodockConfig {
+}
+
+function generate_config($receptor, $ligand) {
+    $config = new AutodockConfig();
+    $config->receptor = $receptor;
+    $config->ligands = array($ligand);
+
+    return json_encode($config, JSON_PRETTY_PRINT);
+}
+
 $user = get_logged_in_user();
 $up = submit_permissions($user);
 if (!$up) error_page("no permissions");
