@@ -108,18 +108,27 @@ function left(){
                 echo "</ul>\n";
             } else {
                 echo "<p>
-                    This project lets anyone run jobs
-                    using a limited set of science applications:
-                    <p>
-                    <ul>
-                    <li>
-                    Autodock from the Scripps Institute.
-                    <li> More soon.
-                    </ul>
-                    <p>
-                    This allows scientists to use BOINC-based volunteer computing
-                    without creating their own project.
-                    </p>
+<ul>
+<li><b>BOINC Central</b> gives scientists access to the power of volunteer computing
+without having to operate a BOINC project.
+<li>
+It supports widely-used science applications, such as
+<a href=https://autodock.scripps.edu/>Autodock</a>
+from the Scripps Research Institute,
+with versions for a range of computing platforms.
+<li>
+Scientists from academic research institutions
+can submit jobs for these applications
+using existing user interfaces such as
+<a href=https://autodock.scripps.edu/resources/raccoon2/>Raccoon2</a>.
+<li>
+BOINC Central is operated by
+<a href=https://boinc.berkeley.edu>the U.C. Berkeley BOINC project</a>.
+</ul>
+<p>
+Participate in BOINC Central
+and help broaden the scientific usage of BOINC and volunteer computing.
+<p>
                 ";
                 if (NO_COMPUTING) {
                     if (!$no_web_account_creation) {

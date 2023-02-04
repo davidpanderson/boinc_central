@@ -41,9 +41,12 @@ function action() {
 }
 
 $user = get_logged_in_user();
-$uid = parse_config(get_config(), "<add_av_userid>");
-if (!$uid) die('no uid');
-if ($user->id != $uid) die('bad uid');
+$uids = parse_config(get_config(), "<add_av_userids>");
+if (!$uids) die('no uids');
+$uids = explode(',', $uids);
+if (!in_array($user->id, $uids)) {
+    die('bad uid');
+}
 
 $action = post_str("action", true);
 if ($action == "add") {

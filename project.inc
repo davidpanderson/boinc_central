@@ -58,7 +58,7 @@ define("POST_REPORT_EMAILS", "moderator1@$master_url|moderator2@$master_url");
 
 define("FORUM_QA_MERGED_MODE", true);
     // Set to true to merge Message boards and Q&A section
-define ("DISABLE_PROFILES", true);
+define ("DISABLE_PROFILES", false);
     // enable profiles only after enabling reCAPTCHA
     // https://boinc.berkeley.edu/trac/wiki/ProtectionFromSpam
 define("USE_STOPFORUMSPAM", true);
