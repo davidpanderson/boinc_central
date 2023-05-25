@@ -37,8 +37,10 @@ function form2($s, $user) {
     }
 
     page_head("Submit Autodock jobs");
-    echo "Scoring function: $n
-        <p><a href=autodock.php>Select other scoring function</a>.
+    echo "<p>
+        Scoring function: $n
+        <br><a href=autodock.php>Select other scoring function</a>.
+        <p>* = required fields
     ";
     form_start("autodock.php");
     form_input_hidden('scoring', $s);
@@ -52,18 +54,18 @@ function form2($s, $user) {
     $sb = "<br><small>Select .zip files in your <a href=sandbox.php>sandbox</a>.
         <br>Use ctrl-click to select multiple files.</small>";
     if ($s == 'ad4') {
-        form_select_multiple("Maps$sb", 'maps', $sbitems);
+        form_select_multiple("* Maps$sb", 'maps', $sbitems);
     } else {
-        form_select_multiple("Receptors$sb", 'receptors', $sbitems);
+        form_select_multiple("* Receptors$sb", 'receptors', $sbitems);
     }
-    form_select_multiple("Ligands$sb", 'ligands', $sbitems);
+    form_select_multiple("* Ligands$sb", 'ligands', $sbitems);
     if ($s != 'ad4') {
-        form_general('Center',
+        form_general('* Center',
             "<input name=center_x placeholder=X>
             <input name=center_y placeholder=Y>
             <input name=center_z placeholder=Z>"
         );
-        form_general('Size',
+        form_general('* Size',
             "<input name=size_x placeholder=X>
             <input name=size_y placeholder=Y>
             <input name=size_z placeholder=Z>"
@@ -133,30 +135,42 @@ function action2($user) {
     $y = get_str('maps', true);
     if ($y) {
         $x->maps = implode(' ', array_map(function($f) use($sbdir) {return "$sbdir/$f";}, $y));
+    } else if ($s == 'ad4') {
+        error_page('no map specified');
     }
 
     $y = get_str('receptors', true);
     if ($y) {
         $x->receptors = implode(' ', array_map(function($f) use($sbdir) {return "$sbdir/$f";}, $y));
+    } else if ($s != 'ad4') {
+        error_page('no receptor specified');
     }
 
     $y = get_str('ligands', true);
     if ($y) {
         $x->ligands = implode(' ', array_map(function($f) use($sbdir) {return "$sbdir/$f";}, $y));
+    } else {
+        error_page('no ligands specified');
     }
 
     $y = check_double('center_x', 0, 999.);
+    if ($y === null and $s != 'ad4') error_page('missing center');
     if ($y !== null) $x->center_x = $y;
     $y = check_double('center_y', 0, 999.);
+    if ($y === null and $s != 'ad4') error_page('missing center');
     if ($y !== null) $x->center_y = $y;
     $y = check_double('center_z', 0, 999.);
+    if ($y === null and $s != 'ad4') error_page('missing center');
     if ($y !== null) $x->center_z = $y;
 
     $y = check_double('size_x', 0, 999.);
+    if ($y === null and $s != 'ad4') error_page('missing size');
     if ($y !== null) $x->size_x = $y;
     $y = check_double('size_y', 0, 999.);
+    if ($y === null and $s != 'ad4') error_page('missing size');
     if ($y !== null) $x->size_y = $y;
     $y = check_double('size_z', 0, 999.);
+    if ($y === null and $s != 'ad4') error_page('missing size');
     if ($y !== null) $x->size_z = $y;
 
     $y = check_double('weight_gauss1', 0, 999.);
