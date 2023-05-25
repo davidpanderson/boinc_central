@@ -57,6 +57,33 @@ function top() {
     //panel(null, 'panel_contents');
 }
 
+function intro() {
+    echo "<p>
+<b>BOINC Central</b>:
+<ul>
+<li> gives scientists access to the power of volunteer computing
+without having to operate a BOINC project
+<li>
+supports widely-used science applications, such as
+<a href=https://autodock.scripps.edu/>Autodock Vina</a>
+from the Scripps Research Institute,
+with versions for a range of computing platforms
+<li>
+lets scientists from academic research institutions
+submit jobs for these applications
+using existing user interfaces such as
+<a href=https://autodock.scripps.edu/resources/raccoon2/>Raccoon2</a>
+<li>
+is operated by
+<a href=https://boinc.berkeley.edu>the U.C. Berkeley BOINC project</a>
+</ul>
+<p>
+Participate in <b>BOINC Central</b>
+and help broaden the scientific usage of BOINC and volunteer computing.
+<p>
+";
+}
+
 function left(){
     global $user, $no_web_account_creation, $master_url, $project_id;
     panel(
@@ -64,6 +91,8 @@ function left(){
         function() use($user) {
             global $no_web_account_creation, $master_url, $project_id;
             if ($user) {
+                intro();
+                echo "<hr>";
                 $dt = time() - $user->create_time;
                 if ($dt < 86400) {
                     echo tra("Thanks for joining %1", PROJECT);
@@ -107,29 +136,7 @@ function left(){
                 }
                 echo "</ul>\n";
             } else {
-                echo "<p>
-<ul>
-<li><b>BOINC Central</b> gives scientists access to the power of volunteer computing
-without having to operate a BOINC project.
-<li>
-It supports widely-used science applications, such as
-<a href=https://autodock.scripps.edu/>Autodock</a>
-from the Scripps Research Institute,
-with versions for a range of computing platforms.
-<li>
-Scientists from academic research institutions
-can submit jobs for these applications
-using existing user interfaces such as
-<a href=https://autodock.scripps.edu/resources/raccoon2/>Raccoon2</a>.
-<li>
-BOINC Central is operated by
-<a href=https://boinc.berkeley.edu>the U.C. Berkeley BOINC project</a>.
-</ul>
-<p>
-Participate in BOINC Central
-and help broaden the scientific usage of BOINC and volunteer computing.
-<p>
-                ";
+                intro();
                 if (NO_COMPUTING) {
                     if (!$no_web_account_creation) {
                         echo "
