@@ -131,10 +131,24 @@ function get_files($dir, $suffix) {
     $out = [];
     foreach ($files as $f) {
         if ($f[0] == '.') continue;
-        if (!strstr($f, '.pdbqt')) die("bad file $f");
+        if (!strstr($f, '.pdbqt')) continue;
         $out[] = $f;
     }
     return $out;
+}
+
+// $fname is of the form X.pdbqt
+// copy all files $src_dir/X.Y  to $dst_dir
+//
+function copy_map_files($src_dir, $fname, $dst_dir) {
+    $base_name = explode('.pdbqt', $fname)[0];
+    $files = scandir($src_dir);
+    foreach ($files as $f) {
+        if ($f[0] == '.') continue;
+        if (strpos($f, $base_name) === 0) {
+            copy("$src_dir/$f", "$dst_dir/$f");
+        }
+    }
 }
 
 // directory structure:
@@ -148,31 +162,47 @@ function get_files($dir, $suffix) {
 //      jobno is 0,1,...
 // output file: autodock_userid_batchid_jobno_out.zip
 
-// create a job for a file pair
-// - copy the files to a temp dir
+// create a job for vina or vinardo
+// - copy the files to a temp "job dir"
 // - add a JSON file
 // - zip the dir
 // - stage the zip file
 // - create the job
 //
-function make_job($desc, $batch_id, $seqno, $ligand, $receptor) {
+function make_job($desc, $batch_id, $seqno, $ligand, $other) {
     $job_name = sprintf('autodock_%d_%d', $batch_id, $seqno);
     $batch_dir = sprintf('submit/%d', $batch_id);
     $job_dir = sprintf('%s/%s', $batch_dir, $job_name);
     mkdir($job_dir);
-    copy("$batch_dir/ligands/$ligand", "$job_dir/$ligand");
-    copy("$batch_dir/receptors/$receptor", "$job_dir/$receptor");
     $desc2 = clone $desc;
+    copy("$batch_dir/ligands/$ligand", "$job_dir/$ligand");
     $desc->ligands = $ligand;
-    $desc->receptors = $receptor;
+    if ($desc->scoring == 'ad4') {
+        copy_map_files("$batch_dir/maps", $other, $job_dir);
+        $desc->maps = $other;
+    } else {
+        copy("$batch_dir/receptors/$other", "$job_dir/$other");
+        $desc->receptors = $other;
+    }
+
+    $desc2->seed = mt_rand();
+    $desc2->out = sprintf('%s_%s_%s_out.pdbqt',
+        explode('.pdbqt', $ligand)[0],
+        explode('.pdbqt', $other)[0],
+        $desc->scoring
+    );
     $j = json_encode($desc2, JSON_PRETTY_PRINT);
     file_put_contents("$job_dir/desc.json", $j);
-    $cmd = sprintf('zip -r %s.zip %s/*', $job_dir, $job_dir);
-    echo "cmd: $cmd\n";
+    $cmd = sprintf('zip -j -q -r %s.zip %s/*', $job_dir, $job_dir);
+        // -j means archive just the files, not the dir structure
+    //echo "cmd: $cmd\n";
     system($cmd);
-    exit;
-    stage_local_file(sprintf('autodock/%s.zip', $job_name));
 
+    echo sprintf('<p><a href=submit/%d/%s.zip>%s</a>', $batch_id, $job_name, $job_name);
+
+    return;
+
+    $path = stage_file_basic($batch_dir, "$job_name.zip");
     $cmd = sprintf('create_work --appname autodock --batch %d autodock/%s.zip',
         $batch_id, $job_name
     );
@@ -187,6 +217,7 @@ function make_batch($desc, $user) {
     //
 if (true) {
     $batch_id = 0;
+    system('rm -rf submit/0/*');
 } else {
     echo "<pre>\n";
     $now = time();
@@ -208,37 +239,55 @@ if (true) {
     @mkdir($dir_ligands);
     $ligands_phys = sandbox_log_to_phys($user, $desc->ligands);
     if (!$ligands_phys) die("no ligands file $desc->ligands");
-    $cmd = sprintf("unzip %s -d %s", $ligands_phys, $dir_ligands);
-    echo "ligand cmd: $cmd\n";
+    $cmd = sprintf("unzip -q %s -d %s", $ligands_phys, $dir_ligands);
+    //echo "ligands cmd: $cmd\n";
     $x = system($cmd, $retval);
     if ($retval && $retval != 1) die("ERROR: $cmd: $retval; $x\n");
     $ligands = get_files($dir_ligands, '.pdbqt');
+    //print_r($ligands);
 
-    print_r($ligands);
-    echo "done with ligands\n";
+    if ($desc->scoring == 'ad4') {
+        $dir_maps = "$dir/maps";
+        @mkdir($dir_maps);
+        $maps_phys = sandbox_log_to_phys($user, $desc->maps);
+        if (!$maps_phys) die("no maps file $desc->maps");
+        $cmd = sprintf("unzip -q %s -d %s", $maps_phys, $dir_maps);
+        //echo "maps cmd: $cmd\n";
+        $x = system($cmd, $retval);
+        if ($retval && $retval != 1) die("ERROR: $cmd: $retval; $x\n");
+        $maps = get_files($dir_maps, '.pdbqt');
+        //print_r($maps);
+    } else {
+        $dir_receptors = "$dir/receptors";
+        @mkdir($dir_receptors);
+        $receptors_phys = sandbox_log_to_phys($user, $desc->receptors);
+        if (!$receptors_phys) die("no receptors file $desc->receptors");
+        $cmd = sprintf("unzip -q %s -d %s", $receptors_phys, $dir_receptors);
+        //echo "receptors cmd: $cmd\n";
+        $x = system($cmd, $retval);
+        if ($retval && $retval != 1) die("ERROR: $cmd: $retval; $x\n");
+        $receptors = get_files($dir_receptors, '.pdbqt');
+        //print_r($receptors);
+    }
 
-    $dir_receptors = "$dir/receptors";
-    @mkdir($dir_receptors);
-    $receptors_phys = sandbox_log_to_phys($user, $desc->receptors);
-    if (!$receptors_phys) die("no receptors file $desc->receptors");
-    $cmd = sprintf("unzip %s -d %s", $receptors_phys, $dir_receptors);
-    echo "receptors cmd: $cmd\n";
-    $x = system($cmd, $retval);
-    if ($retval && $retval != 1) die("ERROR: $cmd: $retval; $x\n");
-    $receptors = get_files($dir_receptors, '.pdbqt');
-
-    print_r($receptors);
-    echo "done with receptors\n";
-
+    page_head('Jobs');
     // make a job for each combination of ligand and receptor
     //
     $seqno = 0;
-    foreach ($ligands as $ligand) {
-        foreach ($receptors as $receptor) {
-            make_job($desc, $batch_id, $seqno++, $ligand, $receptor);
+    if ($desc->scoring == 'ad4') {
+        foreach ($ligands as $ligand) {
+            foreach ($maps as $map) {
+                make_job($desc, $batch_id, $seqno++, $ligand, $map);
+            }
+        }
+    } else {
+        foreach ($ligands as $ligand) {
+            foreach ($receptors as $receptor) {
+                make_job($desc, $batch_id, $seqno++, $ligand, $receptor);
+            }
         }
     }
-    echo "done";
+    page_tail();
 }
 
 function action2($user) {
