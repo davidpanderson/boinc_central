@@ -126,29 +126,143 @@ function check_int($name, $min, $max) {
     return $x;
 }
 
+function get_files($dir, $suffix) {
+    $files = scandir($dir);
+    $out = [];
+    foreach ($files as $f) {
+        if ($f[0] == '.') continue;
+        if (!strstr($f, '.pdbqt')) die("bad file $f");
+        $out[] = $f;
+    }
+    return $out;
+}
+
+// directory structure:
+// html/user/submit/
+//      batchid/
+//          zipped and unzipped ligand/map/rec files
+//          these are temp files; can delete dir when done
+//          Keep them here to avoid collisions if multiple submissions at same time
+// physical filenames
+// input file: autodock_userid_batchid_jobno_in.zip
+//      jobno is 0,1,...
+// output file: autodock_userid_batchid_jobno_out.zip
+
+// create a job for a file pair
+// - copy the files to a temp dir
+// - add a JSON file
+// - zip the dir
+// - stage the zip file
+// - create the job
+//
+function make_job($desc, $batch_id, $seqno, $ligand, $receptor) {
+    $job_name = sprintf('autodock_%d_%d', $batch_id, $seqno);
+    $batch_dir = sprintf('submit/%d', $batch_id);
+    $job_dir = sprintf('%s/%s', $batch_dir, $job_name);
+    mkdir($job_dir);
+    copy("$batch_dir/ligands/$ligand", "$job_dir/$ligand");
+    copy("$batch_dir/receptors/$receptor", "$job_dir/$receptor");
+    $desc2 = clone $desc;
+    $desc->ligands = $ligand;
+    $desc->receptors = $receptor;
+    $j = json_encode($desc2, JSON_PRETTY_PRINT);
+    file_put_contents("$job_dir/desc.json", $j);
+    $cmd = sprintf('zip -r %s.zip %s/*', $job_dir, $job_dir);
+    echo "cmd: $cmd\n";
+    system($cmd);
+    exit;
+    stage_local_file(sprintf('autodock/%s.zip', $job_name));
+
+    $cmd = sprintf('create_work --appname autodock --batch %d autodock/%s.zip',
+        $batch_id, $job_name
+    );
+    system($cmd);
+}
+
+// create a batch and jobs for the given batch descriptor
+// input files are in user sandbox
+//
+function make_batch($desc, $user) {
+    // make a batch
+    //
+if (true) {
+    $batch_id = 0;
+} else {
+    echo "<pre>\n";
+    $now = time();
+    $njobs = count($ligands)*count($receptors);
+    $app = BoincApp::lookup_name('autodock');
+    $batch_id = BoincBatch::insert(
+        "(user_id, create_time, njobs, name, app_id, state) values ($user->id, $now, $njobs, 'autodock batch', $app->id, ".BATCH_STATE_IN_PROGRESS.")"
+    );
+}
+
+    // make a temp dir for the batch
+
+    $dir = sprintf('submit/%d', $batch_id);
+    @mkdir($dir);
+
+    // unzip the input files
+
+    $dir_ligands = "$dir/ligands";
+    @mkdir($dir_ligands);
+    $ligands_phys = sandbox_log_to_phys($user, $desc->ligands);
+    if (!$ligands_phys) die("no ligands file $desc->ligands");
+    $cmd = sprintf("unzip %s -d %s", $ligands_phys, $dir_ligands);
+    echo "ligand cmd: $cmd\n";
+    $x = system($cmd, $retval);
+    if ($retval && $retval != 1) die("ERROR: $cmd: $retval; $x\n");
+    $ligands = get_files($dir_ligands, '.pdbqt');
+
+    print_r($ligands);
+    echo "done with ligands\n";
+
+    $dir_receptors = "$dir/receptors";
+    @mkdir($dir_receptors);
+    $receptors_phys = sandbox_log_to_phys($user, $desc->receptors);
+    if (!$receptors_phys) die("no receptors file $desc->receptors");
+    $cmd = sprintf("unzip %s -d %s", $receptors_phys, $dir_receptors);
+    echo "receptors cmd: $cmd\n";
+    $x = system($cmd, $retval);
+    if ($retval && $retval != 1) die("ERROR: $cmd: $retval; $x\n");
+    $receptors = get_files($dir_receptors, '.pdbqt');
+
+    print_r($receptors);
+    echo "done with receptors\n";
+
+    // make a job for each combination of ligand and receptor
+    //
+    $seqno = 0;
+    foreach ($ligands as $ligand) {
+        foreach ($receptors as $receptor) {
+            make_job($desc, $batch_id, $seqno++, $ligand, $receptor);
+        }
+    }
+    echo "done";
+}
+
 function action2($user) {
     $x = new stdClass;
     $s = get_str('scoring');
     $x->scoring = $s;
 
-    $sbdir = sandbox_dir($user);
     $y = get_str('maps', true);
     if ($y) {
-        $x->maps = implode(' ', array_map(function($f) use($sbdir) {return "$sbdir/$f";}, $y));
+        $x->maps = $y[0];
     } else if ($s == 'ad4') {
         error_page('no map specified');
     }
 
     $y = get_str('receptors', true);
     if ($y) {
-        $x->receptors = implode(' ', array_map(function($f) use($sbdir) {return "$sbdir/$f";}, $y));
+        $x->receptors = $y[0];
     } else if ($s != 'ad4') {
         error_page('no receptor specified');
     }
 
     $y = get_str('ligands', true);
     if ($y) {
-        $x->ligands = implode(' ', array_map(function($f) use($sbdir) {return "$sbdir/$f";}, $y));
+        $x->ligands = $y[0];
     } else {
         error_page('no ligands specified');
     }
@@ -227,8 +341,9 @@ function action2($user) {
     $y = check_double('spacing', 0, 999.);
     if ($y) $x->spacing = $y;
 
-    echo "<pre>";
-    echo json_encode($x, JSON_PRETTY_PRINT);
+    //echo "<pre>";
+    //echo json_encode($x, JSON_PRETTY_PRINT);
+    make_batch($x, $user);
 }
 
 $user = get_logged_in_user();
