@@ -4,19 +4,7 @@ require_once("../inc/util.inc");
 require_once("../inc/sandbox.inc");
 require_once("../inc/submit_util.inc");
 
-function form() {
-    page_head("Submit Autodock jobs");
-    form_start("autodock.php");
-    form_input_text("Receptor<br><small>Must be in your <a href=sandbox.php>sandbox</a></small>", 'file1');
-    form_input_text("Ligand", 'file2');
-    form_input_textarea("Parameters", 'param');
-    form_submit("OK");
-    form_end();
-    page_tail();
-}
-
-
-function form2($s, $user) {
+function form($s, $user) {
     if (!$s) {
         page_head("Submit Autodock jobs");
         echo "Select scoring function:
@@ -78,9 +66,9 @@ function form2($s, $user) {
         form_input_text("elec", 'weight_elec');
         form_input_text("dsolv", 'weight_dsolv');
     } else {
-        form_input_text("Gauss 1", 'weight_gauss_1');
+        form_input_text("Gauss 1", 'weight_gauss1');
         if ($s == 'vina') {
-            form_input_text("Gauss 2", 'weight_gauss_2');
+            form_input_text("Gauss 2", 'weight_gauss2');
         }
         form_input_text("Repulsion", 'weight_repulsion');
         form_input_text("Hydrophobic", 'weight_hydrophobic');
@@ -104,25 +92,25 @@ function form2($s, $user) {
     page_tail();
 }
 
-function check_double($name, $min, $max) {
+function check_double($name, $min=null, $max=null) {
     $x = get_str($name, true);
     if ($x === null) return null;
     if ($x === '') return null;
     if (!is_numeric($x)) die("$name is not numeric");
     $x = (double)$x;
-    if ($x < $min) die("$name is too small");
-    if ($x > $max) die("$name is too big");
+    if ($min!==null && $x < $min) die("$name is too small");
+    if ($max!==null && $x > $max) die("$name is too big");
     return $x;
 }
 
-function check_int($name, $min, $max) {
+function check_int($name, $min=null, $max=null) {
     $x = get_str($name, true);
     if ($x === null) return null;
     if ($x === '') return null;
     if (!ctype_digit($x)) die("$name is not integer");
     $x = (int)$x;
-    if ($x < $min) die("$name is too small");
-    if ($x > $max) die("$name is too big");
+    if ($min!==null && $x < $min) die("$name is too small");
+    if ($max!==null && $x > $max) die("$name is too big");
     return $x;
 }
 
@@ -176,13 +164,13 @@ function make_job($desc, $batch_id, $seqno, $ligand, $other) {
     mkdir($job_dir);
     $desc2 = clone $desc;
     copy("$batch_dir/ligands/$ligand", "$job_dir/$ligand");
-    $desc->ligands = $ligand;
+    $desc2->ligands = $ligand;
     if ($desc->scoring == 'ad4') {
         copy_map_files("$batch_dir/maps", $other, $job_dir);
-        $desc->maps = $other;
+        $desc2->maps = explode('.pdbqt', $other)[0];
     } else {
         copy("$batch_dir/receptors/$other", "$job_dir/$other");
-        $desc->receptors = $other;
+        $desc2->receptors = $other;
     }
 
     $desc2->seed = mt_rand();
@@ -198,7 +186,12 @@ function make_job($desc, $batch_id, $seqno, $ligand, $other) {
     //echo "cmd: $cmd\n";
     system($cmd);
 
-    echo sprintf('<p><a href=submit/%d/%s.zip>%s</a>', $batch_id, $job_name, $job_name);
+    echo sprintf(
+        '<p>%s: <a href=submit/%d/%s>dir</a> | <a href=submit/%d/%s.zip>zip</a>',
+        $job_name,
+        $batch_id, $job_name,
+        $batch_id, $job_name
+    );
 
     return;
 
@@ -290,7 +283,7 @@ if (true) {
     page_tail();
 }
 
-function action2($user) {
+function action($user) {
     $x = new stdClass;
     $s = get_str('scoring');
     $x->scoring = $s;
@@ -316,78 +309,78 @@ function action2($user) {
         error_page('no ligands specified');
     }
 
-    $y = check_double('center_x', 0, 999.);
+    $y = check_double('center_x');
     if ($y === null and $s != 'ad4') error_page('missing center');
     if ($y !== null) $x->center_x = $y;
-    $y = check_double('center_y', 0, 999.);
+    $y = check_double('center_y');
     if ($y === null and $s != 'ad4') error_page('missing center');
     if ($y !== null) $x->center_y = $y;
-    $y = check_double('center_z', 0, 999.);
+    $y = check_double('center_z');
     if ($y === null and $s != 'ad4') error_page('missing center');
     if ($y !== null) $x->center_z = $y;
 
-    $y = check_double('size_x', 0, 999.);
+    $y = check_double('size_x');
     if ($y === null and $s != 'ad4') error_page('missing size');
     if ($y !== null) $x->size_x = $y;
-    $y = check_double('size_y', 0, 999.);
+    $y = check_double('size_y');
     if ($y === null and $s != 'ad4') error_page('missing size');
     if ($y !== null) $x->size_y = $y;
-    $y = check_double('size_z', 0, 999.);
+    $y = check_double('size_z');
     if ($y === null and $s != 'ad4') error_page('missing size');
     if ($y !== null) $x->size_z = $y;
 
-    $y = check_double('weight_gauss1', 0, 999.);
+    $y = check_double('weight_gauss1');
     if ($y !== null) $x->weight_gauss1 = $y;
 
-    $y = check_double('weight_gauss2', 0, 999.);
+    $y = check_double('weight_gauss2');
     if ($y !== null) $x->weight_gauss2 = $y;
 
-    $y = check_double('weight_repulsion', 0, 999.);
+    $y = check_double('weight_repulsion');
     if ($y !== null) $x->weight_repulsion = $y;
 
-    $y = check_double('weight_hydrophobic', 0, 999.);
+    $y = check_double('weight_hydrophobic');
     if ($y !== null) $x->weight_hydrophobic = $y;
 
-    $y = check_double('weight_hydrogen', 0, 999.);
+    $y = check_double('weight_hydrogen');
     if ($y !== null) $x->weight_hydrogen = $y;
 
-    $y = check_double('weight_vdw', 0, 999.);
+    $y = check_double('weight_vdw');
     if ($y !== null) $x->weight_vdw = $y;
 
-    $y = check_double('weight_hb', 0, 999.);
+    $y = check_double('weight_hb');
     if ($y) $x->weight_hb = $y;
 
-    $y = check_double('weight_elec', 0, 999.);
+    $y = check_double('weight_elec');
     if ($y) $x->weight_elec = $y;
 
-    $y = check_double('weight_dsolv', 0, 999.);
+    $y = check_double('weight_dsolv');
     if ($y) $x->weight_dsolv = $y;
 
-    $y = check_double('weight_rot', 0, 999.);
+    $y = check_double('weight_rot');
     if ($y) $x->weight_rot = $y;
 
     $y = (boolean)get_str('force_even_voxels', true);
     if ($y) $x->force_even_voxels = $y;
 
-    $y = check_double('weight_glue', 0, 999.);
+    $y = check_double('weight_glue');
     if ($y) $x->weight_glue = $y;
 
-    $y = check_int('exhaustiveness', 0, 999.);
+    $y = check_int('exhaustiveness');
     if ($y) $x->exhaustiveness = $y;
 
-    $y = check_int('max_evals', 0, 999.);
+    $y = check_int('max_evals');
     if ($y) $x->max_evals = $y;
 
-    $y = check_int('num_modes', 0, 999.);
+    $y = check_int('num_modes');
     if ($y) $x->num_modes = $y;
 
-    $y = check_double('min_rmsd', 0, 999.);
+    $y = check_double('min_rmsd');
     if ($y) $x->min_rmsd = $y;
 
-    $y = check_double('energy_range', 0, 999.);
+    $y = check_double('energy_range');
     if ($y) $x->energy_range = $y;
 
-    $y = check_double('spacing', 0, 999.);
+    $y = check_double('spacing');
     if ($y) $x->spacing = $y;
 
     //echo "<pre>";
@@ -406,10 +399,10 @@ if (!$up->submit_all) {
 
 //print_r($_GET);
 if (get_str('submit', true)) {
-    action2($user);
+    action($user);
 } else {
     $s = get_str('s', true);
-    form2($s, $user);
+    form($s, $user);
 }
 
 ?>
