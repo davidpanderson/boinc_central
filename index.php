@@ -58,11 +58,17 @@ function top() {
 }
 
 function intro() {
+    global $user;
     echo "<p>
-<b>BOINC Central</b>:
+<b>BOINC Central</b> is based on 
+<a href=https://boinc.berkeley.edu>BOINC</a> - a system for
+\"volunteer computing\", allowing people around the world
+to donate computing power to science research.
+<br>
+BOINC Central:
 <ul>
 <li> gives scientists access to the power of volunteer computing
-without having to operate a BOINC project
+without having to operate a BOINC server.
 <li>
 supports widely-used science applications, such as
 <a href=https://autodock.scripps.edu/>Autodock Vina</a>
@@ -70,16 +76,27 @@ from the Scripps Research Institute,
 with versions for a range of computing platforms
 <li>
 lets scientists from academic research institutions
-submit jobs for these applications
-using existing user interfaces such as
-<a href=https://autodock.scripps.edu/resources/raccoon2/>Raccoon2</a>
+submit jobs for these applications.
 <li>
 is operated by
 <a href=https://boinc.berkeley.edu>the U.C. Berkeley BOINC project</a>
 </ul>
 <p>
-Participate in <b>BOINC Central</b>
-and help broaden the scientific usage of BOINC and volunteer computing.
+";
+
+    if ($user && BoincUserSubmit::lookup_userid($user->id)) {
+        echo "<hr>";
+        show_button('submit.php', 'Job submission');
+        show_button('sandbox.php', 'File sandbox');
+    } else {
+        echo "
+            <b>Scientists</b>: if you're interested in
+            computing using BOINC Central,
+            please <a href=https://boinc.berkeley.edu/anderson/>contact us</a>.
+        ";
+    }
+echo "
+<p>
 <p>
 ";
 }
@@ -146,6 +163,10 @@ function left(){
                 } else {
                     // use auto-attach if possible
                     //
+                    echo "
+                    <b>Computer owners</b>:
+                    <p>
+                    ";
                     if (!$no_web_account_creation) {
                         echo '<center><a href="signup.php" class="btn btn-success"><font size=+2>'.tra('Join %1', PROJECT).'</font></a></center>';
                     }

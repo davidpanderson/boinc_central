@@ -157,10 +157,13 @@ function copy_map_files($src_dir, $fname, $dst_dir) {
 // - stage the zip file
 // - create the job
 //
+// Return a line to pass to stdin of create_work
+//
 function make_job($desc, $batch_id, $seqno, $ligand, $other) {
     $job_name = sprintf('autodock_%d_%d', $batch_id, $seqno);
     $batch_dir = sprintf('submit/%d', $batch_id);
     $job_dir = sprintf('%s/%s', $batch_dir, $job_name);
+    echo "job dir: $job_dir\n";
     mkdir($job_dir);
     $desc2 = clone $desc;
     copy("$batch_dir/ligands/$ligand", "$job_dir/$ligand");
@@ -186,20 +189,19 @@ function make_job($desc, $batch_id, $seqno, $ligand, $other) {
     //echo "cmd: $cmd\n";
     system($cmd);
 
-    echo sprintf(
-        '<p>%s: <a href=submit/%d/%s>dir</a> | <a href=submit/%d/%s.zip>zip</a>',
-        $job_name,
-        $batch_id, $job_name,
-        $batch_id, $job_name
-    );
-
-    return;
+    if (0) {
+        echo sprintf(
+            '<p>%s: <a href=submit/%d/%s>dir</a> | <a href=submit/%d/%s.zip>zip</a>',
+            $job_name,
+            $batch_id, $job_name,
+            $batch_id, $job_name
+        );
+    }
 
     $path = stage_file_basic($batch_dir, "$job_name.zip");
-    $cmd = sprintf('create_work --appname autodock --batch %d autodock/%s.zip',
-        $batch_id, $job_name
-    );
     system($cmd);
+
+    return "--command_line 'input.zip output.zip' $job_name.zip\n";
 }
 
 // create a batch and jobs for the given batch descriptor
@@ -208,16 +210,14 @@ function make_job($desc, $batch_id, $seqno, $ligand, $other) {
 function make_batch($desc, $user) {
     // make a batch
     //
-if (true) {
+if (false) {
     $batch_id = 0;
     system('rm -rf submit/0/*');
 } else {
-    echo "<pre>\n";
     $now = time();
-    $njobs = count($ligands)*count($receptors);
-    $app = BoincApp::lookup_name('autodock');
+    $app = BoincApp::lookup("name='autodock'");
     $batch_id = BoincBatch::insert(
-        "(user_id, create_time, njobs, name, app_id, state) values ($user->id, $now, $njobs, 'autodock batch', $app->id, ".BATCH_STATE_IN_PROGRESS.")"
+        "(user_id, create_time, name, app_id, state) values ($user->id, $now, 'autodock batch', $app->id, ".BATCH_STATE_IN_PROGRESS.")"
     );
 }
 
@@ -267,18 +267,42 @@ if (true) {
     // make a job for each combination of ligand and receptor
     //
     $seqno = 0;
+    $cw_string = '';
     if ($desc->scoring == 'ad4') {
         foreach ($ligands as $ligand) {
             foreach ($maps as $map) {
-                make_job($desc, $batch_id, $seqno++, $ligand, $map);
+                $cw_string .= make_job($desc, $batch_id, $seqno++, $ligand, $map);
             }
         }
     } else {
         foreach ($ligands as $ligand) {
             foreach ($receptors as $receptor) {
-                make_job($desc, $batch_id, $seqno++, $ligand, $receptor);
+                $cw_string .= make_job($desc, $batch_id, $seqno++, $ligand, $receptor);
             }
         }
+    }
+    $batch = BoincBatch::lookup_id($batch_id);
+    if ($batch) {
+        $batch->update("njobs=$seqno");
+    } else {
+        die ("no batch $batch_id");
+    }
+
+    $errfile = "submit/$batch_id/cw_err.txt";
+    $cmd = sprintf(
+        'cd ../..; bin/create_work --appname autodock --batch %d --stdin 2>&1 > html/user/%s',
+        $batch_id, $errfile
+    );
+    echo "<br>$cmd<br>";
+    echo "cw_string: [$cw_string]</br>";
+    $h = popen($cmd, 'w');
+    if ($h === false) error_page("can't run create_work");
+    fwrite($h, $cw_string);
+    $ret = pclose($h);
+    if ($ret) {
+        echo "create_work failed: $ret";
+        $err = file_get_contents($errfile);
+        echo "<pre>$err</pre>";
     }
     page_tail();
 }
