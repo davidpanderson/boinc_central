@@ -88,6 +88,8 @@ define('MAX_CPUS_PREF', false);
 
 //-------------- PHPMailer
 
+define('EMAIL_USE_CMD', true);
+
 // If you use PHPMailer, uncomment the following
 // and complete the function definition based on your SMTP server
 // (not all fields may be needed)
@@ -95,22 +97,9 @@ define('MAX_CPUS_PREF', false);
 if (0) {
 function make_php_mailer() {
     $mail = new PHPMailer();
-    $mail->IsSMTP();
-    //$mail->Mailer = 'smtp';
-    $mail->SMTPAuth = true;
-    $mail->SMTPSecure = "tls";
-    $mail->Host = "smtp.gmail.com";
-    $mail->Port = 587;
-    $mail->Username = "john.doe@gmail.com";
-    $mail->Password = "xxx";
-        // Google's application-specific password,
-        // if you are using the 2-Step Verification: 16 characters, no spaces.
-        // OR: Put here the regular Gmail password if you are not using the
-        // 2-Step Verification with your Gmail account.
-        // See https://support.google.com/accounts/answer/185833?hl=en";
-    $mail->SetFrom('admin@boincproject.com', 'John Doe');
-    $mail->AddReplyTo("admin@boincproject.com", "John Doe");
-    $mail->From = "admin@boincproject.com";
+    $mail->Mailer = 'smtp';
+    $mail->Host = 'mail3.ssl.berkeley.edu';
+    $mail->setFrom('noreply@isaac.ssl.berkeley.edu', 'BOINC Admin');
     return $mail;
 }
 }
@@ -197,6 +186,7 @@ function navbar(
 // if you need to open divs here close them in project_footer()
 //
 function project_banner($title, $prefix, $is_main) {
+    error_reporting(E_ALL);
     if ($is_main) {
         //echo '<img class="img-responsive" style="width:100%" src="img/water.jpg">';
     }

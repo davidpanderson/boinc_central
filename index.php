@@ -64,7 +64,7 @@ function intro() {
 <a href=https://boinc.berkeley.edu>BOINC</a> - a system for
 \"volunteer computing\", allowing people around the world
 to donate computing power to science research.
-<br>
+<p>
 BOINC Central:
 <ul>
 <li> gives scientists access to the power of volunteer computing
@@ -92,7 +92,7 @@ is operated by
         echo "
             <b>Scientists</b>: if you're interested in
             computing using BOINC Central,
-            please <a href=https://boinc.berkeley.edu/anderson/>contact us</a>.
+            <a href=scientist.php>read this</a>.
         ";
     }
 echo "
