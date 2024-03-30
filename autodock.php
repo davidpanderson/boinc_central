@@ -288,10 +288,15 @@ if (false) {
         die ("no batch $batch_id");
     }
 
-    $errfile = "submit/$batch_id/cw_err.txt";
     $cmd = sprintf(
-        'cd ../..; bin/create_work --appname autodock --batch %d --stdin 2>&1 > html/user/%s',
-        $batch_id, $errfile
+        'cd ../..; bin/create_work --appname autodock --batch %d --stdin ',
+        $batch_id
+    );
+    if ($user->seti_id) {
+        $cmd .= " --target_user $user->id ";
+    }
+    $cmd .= sprintf(' 2>&1 > html/user/submit/%d/cw_err.txt',
+        $batch_id
     );
     echo "<br>$cmd<br>";
     echo "cw_string: [$cw_string]</br>";
