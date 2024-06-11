@@ -16,13 +16,19 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-// This is a template for your web site's front page.
-// You are encouraged to customize this file,
-// and to create a graphical identity for your web site.
-// by customizing the header/footer functions in html/project/project.inc
-// and picking a Bootstrap theme
-//
-// If you add text, put it in tra() to make it translatable.
+// BOINC Central front page.
+// cases:
+// not logged in:
+//      Scientists: button
+//      Computer Owners: buttons
+// logged in, not submitter
+//      Scientists: button
+//      recent work summary
+//      Continue to home page
+// logged in, submitter
+//      Job submission, File sandbox buttons
+//      recent work summary
+//      Continue to home page
 
 require_once("../inc/db.inc");
 require_once("../inc/util.inc");
@@ -62,13 +68,13 @@ function intro() {
     echo "<p>
 <b>BOINC Central</b> is based on 
 <a href=https://boinc.berkeley.edu>BOINC</a> - a system for
-\"volunteer computing\", allowing people around the world
+'volunteer computing', allowing people around the world
 to donate computing power to science research.
+BOINC Central lets scientists access the power of volunteer computing
+without operating a BOINC server.
 <p>
 BOINC Central:
 <ul>
-<li> gives scientists access to the power of volunteer computing
-without having to operate a BOINC server.
 <li>
 supports widely-used science applications, such as
 <a href=https://autodock.scripps.edu/>Autodock Vina</a>
@@ -84,21 +90,83 @@ is operated by
 <p>
 ";
 
-    if ($user && BoincUserSubmit::lookup_userid($user->id)) {
-        echo "<hr>";
-        show_button('submit.php', 'Job submission');
-        show_button('sandbox.php', 'File sandbox');
-    } else {
-        echo "
-            <b>Scientists</b>: if you're interested in
-            computing using BOINC Central,
-            <a href=scientist.php>read this</a>.
-        ";
-    }
 echo "
 <p>
 <p>
 ";
+}
+
+// show user contribution or lack thereof.
+// if new, just say welcome
+//
+function show_user_info($user) {
+    echo "<hr>";
+    $dt = time() - $user->create_time;
+    if ($dt < 86400) {
+        echo tra("Thanks for joining %1", PROJECT);
+    } else if ($user->total_credit == 0) {
+        echo tra("Your computer hasn't completed any tasks yet.  If you need help, %1go here%2.",
+                "<a href=https://boinc.berkeley.edu/help.php>",
+                "</a>"
+        );
+    } else {
+        $x = format_credit($user->expavg_credit);
+        echo tra("You've contributed about %1 credits per day to %2 recently.", $x, PROJECT);
+        if ($user->expavg_credit > 1) {
+            echo " ";
+            echo tra("Thanks!");
+        } else {
+            echo "<p><p>";
+            echo tra("Please make sure BOINC is installed and enabled on your computer.");
+        }
+    }
+    echo "<p><p>";
+    echo sprintf('<a href=home.php class="btn btn-success">%s</a>
+        ',
+        tra('Continue to your home page')
+    );
+    echo "<p><p>";
+    echo sprintf('%s
+        <ul>
+        <li> %s
+        <li> %s
+        <li> %s
+        ',
+        tra("Want to help more?"),
+        tra("If BOINC is not installed on this computer, %1download it%2.",
+            "<a href=download_software.php>", "</a>"
+        ),
+        tra("Install BOINC on your other computers, tablets, and phones."),
+        tra("Tell your friends about BOINC, and show them how to join %1.", PROJECT)
+    );
+    echo "</ul>\n";
+}
+
+function show_join_button() {
+    echo '
+        <p>
+        <font size=+1><nobr>Computer owners:</nobr></font>
+    ';
+    if (!$no_web_account_creation) {
+        echo '<a href="signup.php" class="btn btn-success"><font size=+1>'.tra('Join %1', PROJECT).'</font></a>';
+    }
+    echo sprintf('<p>%s <a href=%s>%s</a>',
+        tra('Already joined?'),
+        'login_form.php',
+        tra('Log in')
+    );
+}
+
+function scientist_button() {
+    echo '<font size=+1>Scientists:</font>
+        <a href="scientist.php" class="btn btn-success"><font size=+1>Compute with BOINC Central</font></a>
+    ';
+}
+
+function scientist_links() {
+    echo '<hr>';
+    show_button('submit.php', 'Job submission');
+    show_button('sandbox.php', 'File sandbox');
 }
 
 function left(){
@@ -109,71 +177,16 @@ function left(){
             global $no_web_account_creation, $master_url, $project_id;
             if ($user) {
                 intro();
-                echo "<hr>";
-                $dt = time() - $user->create_time;
-                if ($dt < 86400) {
-                    echo tra("Thanks for joining %1", PROJECT);
-                } else if ($user->total_credit == 0) {
-                    echo tra("Your computer hasn't completed any tasks yet.  If you need help, %1go here%2.",
-                            "<a href=https://boinc.berkeley.edu/help.php>",
-                            "</a>"
-                    );
+                if (BoincUserSubmit::lookup_userid($user->id)) {
+                    scientist_links();
                 } else {
-                    $x = format_credit($user->expavg_credit);
-                    echo tra("You've contributed about %1 credits per day to %2 recently.", $x, PROJECT);
-                    if ($user->expavg_credit > 1) {
-                        echo " ";
-                        echo tra("Thanks!");
-                    } else {
-                        echo "<p><p>";
-                        echo tra("Please make sure BOINC is installed and enabled on your computer.");
-                    }
+                    scientist_button();
                 }
-                echo "<p><p>";
-                echo sprintf('<center><a href=home.php class="btn btn-success">%s</a></center>
-                    ',
-                    tra('Continue to your home page')
-                );
-                echo "<p><p>";
-                echo sprintf('%s
-                    <ul>
-                    <li> %s
-                    <li> %s
-                    <li> %s
-                    ',
-                    tra("Want to help more?"),
-                    tra("If BOINC is not installed on this computer, %1download it%2.",
-                        "<a href=download_software.php>", "</a>"
-                    ),
-                    tra("Install BOINC on your other computers, tablets, and phones."),
-                    tra("Tell your friends about BOINC, and show them how to join %1.", PROJECT)
-                );
-                if (function_exists('project_help_more')) {
-                    project_help_more();
-                }
-                echo "</ul>\n";
+                show_user_info($user);
             } else {
                 intro();
-                if (NO_COMPUTING) {
-                    if (!$no_web_account_creation) {
-                        echo "
-                            <a href=\"create_account_form.php\">Create an account</a>
-                        ";
-                    }
-                } else {
-                    // use auto-attach if possible
-                    //
-                    echo "
-                    <b>Computer owners</b>:
-                    <p>
-                    ";
-                    if (!$no_web_account_creation) {
-                        echo '<center><a href="signup.php" class="btn btn-success"><font size=+2>'.tra('Join %1', PROJECT).'</font></a></center>';
-                    }
-                    echo "<p><p>".tra("Already joined? %1Log in%2.",
-                        "<a href=login_form.php>", "</a>"
-                    );
-                }
+                scientist_button();
+                show_join_button();
             }
         }
     );

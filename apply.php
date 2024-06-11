@@ -8,6 +8,7 @@ function form() {
     form_input_hidden('submit', 1);
     form_input_text('Institution:', 'institution');
     form_input_text('URL of page identifying you there:', 'url');
+    form_input_text('Where did you hear about BOINC Central?', 'hear');
     form_input_textarea('Research for which you need computing', 'research');
     form_submit('OK');
     page_tail();
@@ -19,11 +20,13 @@ function action($user) {
     institution: %s
     URL: %s
     research: %s
+    heard about us from: %s
 ',
         $user->email_addr, $user->id,
         get_str('institution', true),
         get_str('url', true),
-        get_str('research', true)
+        get_str('research', true),
+        get_str('hear', true)
     );
     send_email(null, $subject, $body, null, 'davea@berkeley.edu lestat.de.lionkur@gmail.com');
 
