@@ -143,12 +143,17 @@ function show_user_info($user) {
 }
 
 function show_join_button() {
+    global $no_web_account_creation;
     echo '
         <p>
         <font size=+1><nobr>Computer owners:</nobr></font>
     ';
     if (!$no_web_account_creation) {
-        echo '<a href="signup.php" class="btn btn-success"><font size=+1>'.tra('Join %1', PROJECT).'</font></a>';
+        echo sprintf(
+            '<a href="signup.php" %s class="btn"><font size=+1>%s</font></a>',
+            button_style(),
+            tra('Join %1', PROJECT)
+        );
     }
     echo sprintf('<p>%s <a href=%s>%s</a>',
         tra('Already joined?'),
@@ -158,9 +163,12 @@ function show_join_button() {
 }
 
 function scientist_button() {
-    echo '<font size=+1>Scientists:</font>
-        <a href="scientist.php" class="btn btn-success"><font size=+1>Compute with BOINC Central</font></a>
-    ';
+    echo sprintf(
+        '<font size=+1>Scientists:</font>
+            <a href="scientist.php" %s class="btn btn-success"><font size=+1>Compute with BOINC Central</font></a>
+        ',
+        button_style()
+    );
 }
 
 function scientist_links() {

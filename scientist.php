@@ -22,7 +22,7 @@ function main() {
         <p> If you're interested in computing with BOINC Central:
         <ul>
         <li> <a href=signup.php target=_new>Create an account</a>.
-            You don't have to install BOINC, thought we encourage you to do so.
+            You don't have to install BOINC, though we encourage you to do so.
         <li> Fill out <a href=apply.php>this form</a>.
         </ul>
     ";
