@@ -126,7 +126,7 @@ function navbar(
 
     $x = array();
     if ($user) {
-        $x[] = array(tra("Account"), $url_prefix.USER_HOME);
+        $x[] = array(tra("Account"), $url_prefix.HOME_PAGE);
         $x[] = array(tra("Join"), $url_prefix."join.php");
         $x[] = array(tra("Preferences"), $url_prefix."prefs.php?subset=project");
     }

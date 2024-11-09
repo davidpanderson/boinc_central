@@ -155,7 +155,7 @@ function show_join_button() {
             tra('Join %1', PROJECT)
         );
     }
-    echo sprintf('<p>%s <a href=%s>%s</a>',
+    echo sprintf('<p>%s <a href=%s>%s</a><p>',
         tra('Already joined?'),
         'login_form.php',
         tra('Log in')
@@ -193,8 +193,8 @@ function left(){
                 show_user_info($user);
             } else {
                 intro();
-                scientist_button();
                 show_join_button();
+                scientist_button();
             }
         }
     );
