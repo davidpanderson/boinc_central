@@ -418,12 +418,12 @@ function action($user) {
 }
 
 $user = get_logged_in_user();
-$up = submit_permissions($user);
+$up = has_file_access($user);
 if (!$up) error_page("no permissions");
 $app = BoincApp::lookup("name='autodock'");
 if (!$app) error_page("no app");
 if (!$up->submit_all) {
-    if (!submit_permissions_app($user, $app)) error_page("no app permissions");
+    if (!has_submit_access($user, $app->id)) error_page("no app permissions");
 }
 
 //print_r($_GET);

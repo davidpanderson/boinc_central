@@ -15,7 +15,16 @@ require_once("../inc/util.inc");
 define("PROJECT", "BOINC Central");
 define("COPYRIGHT_HOLDER", "UC Berkeley");
 
-$submit_urls = ['Autodock' => 'autodock.php'];
+$web_apps = [];
+function web_app($appname, $submit_url, $assim_move) {
+    global $web_apps;
+    $x = new StdClass;
+    $x->submit_url = $submit_url;
+    $x->assim_move = $assim_move;
+    $web_apps[$appname] = $x;
+}
+web_app("Autodock", "autodock.php", true);
+web_app("buda", "buda.php", true);
 
 //-------------- URLs and directories
 
@@ -53,6 +62,7 @@ define("POST_REPORT_EMAILS", "moderator1@$master_url|moderator2@$master_url");
 // add your own stylesheets (included after bootstrap)
 //define("STYLESHEET", "aaa.css");
 //define("STYLESHEET2", "bbb.css");
+define("DARK_MODE", true);
 
 //-------------- enable/disable web features
 
