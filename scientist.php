@@ -7,23 +7,27 @@ function main() {
     text_start();
     echo "
         <p>
-        BOINC Central provides computing resources
-            to support not-for-profit research at
-            universities and research labs.
-        <p>
-        BOINC Central supports the following applications:
-            <ul>
-            <li> Autodock Vina.
-        You can submit jobs through a web interface,
-            or Raccoon2, using a
-            <a href=https://github.com/BOINC/Raccoon2_BOINC_Plugin>Plug-in</a>.
-            </ul>
+        BOINC Central provides computing power
+            to not-for-profit research projects at
+            universities and research labs,
+            and to independent researchers.
+            Jobs run on the CPUs and GPUs of thousands
+            of volunteered home computers.
 
+        <h3>Applications</h3>
+        <p>
+        BOINC Central provides widely-used applications
+        (currently Autodock and variants).
+        Or you can supply your own applications, packaged using Docker.
+        <a href=show_apps.php>See current applications</a>.
+
+        <h3>Getting started</h3>
         <p> If you're interested in computing with BOINC Central:
         <ul>
-        <li> <a href=signup.php target=_new>Create an account</a>.
-            You don't have to install BOINC, though we encourage you to do so.
-        <li> Fill out <a href=apply.php>this form</a>.
+        <li> <a href=signup.php target=_new>Register with BOINC Central</a>.
+            You don't have to install BOINC on your own computer,
+            though we encourage you to do so.
+        <li> Apply for computing by <a href=apply.php>filling out this form</a>.
         </ul>
     ";
     text_end();

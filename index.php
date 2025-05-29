@@ -78,21 +78,18 @@ BOINC Central:
 <li>
 supports widely-used science applications, such as
 <a href=https://autodock.scripps.edu/>Autodock Vina</a>
-from the Scripps Research Institute,
-with versions for a range of computing platforms
+from the Scripps Research Institute.
 <li>
-lets scientists from academic research institutions
+supports <a href=https://github.com/BOINC/boinc/wiki/BUDA-overview>any app packaged with Docker</a>.
+<li>
+lets scientists from all academic institutions
 submit jobs for these applications.
 <li>
 is operated by
-<a href=https://boinc.berkeley.edu>the U.C. Berkeley BOINC project</a>
+<a href=https://boinc.berkeley.edu>the U.C. Berkeley BOINC project</a>.
 </ul>
 <p>
-";
-
-echo "
-<p>
-<p>
+<a href=show_apps.php>Show apps currently supported by BOINC Central.</a>
 ";
 }
 
@@ -121,8 +118,9 @@ function show_user_info($user) {
         }
     }
     echo "<p><p>";
-    echo sprintf('<a href=home.php class="btn btn-success">%s</a>
+    echo sprintf('<a href=home.php class="btn btn-success" %s>%s</a>
         ',
+        button_style(),
         tra('Continue to your home page')
     );
     echo "<p><p>";
@@ -172,9 +170,9 @@ function scientist_button() {
 }
 
 function scientist_links() {
-    echo '<hr>';
-    show_button('submit.php', 'Job submission');
-    show_button('sandbox.php', 'File sandbox');
+    //echo '<hr>';
+    //show_button('submit.php', 'Job submission');
+    //show_button('sandbox.php', 'File sandbox');
 }
 
 function left(){

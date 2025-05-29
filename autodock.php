@@ -217,7 +217,11 @@ if (false) {
     $now = time();
     $app = BoincApp::lookup("name='autodock'");
     $batch_id = BoincBatch::insert(
-        "(user_id, create_time, name, app_id, state) values ($user->id, $now, 'autodock batch', $app->id, ".BATCH_STATE_IN_PROGRESS.")"
+        sprintf(
+            "(user_id, create_time, name, app_id, state) values (%d, %d, '%s', %d, %d)",
+            $user->id, $now, 'autodock batch',
+            $app->id, BATCH_STATE_IN_PROGRESS
+        )
     );
 }
 
@@ -230,7 +234,7 @@ if (false) {
 
     $dir_ligands = "$dir/ligands";
     @mkdir($dir_ligands);
-    $ligands_phys = sandbox_log_to_phys($user, $desc->ligands);
+    $ligands_phys = sandbox_path($user, $desc->ligands);
     if (!$ligands_phys) die("no ligands file $desc->ligands");
     $cmd = sprintf("unzip -q %s -d %s", $ligands_phys, $dir_ligands);
     //echo "ligands cmd: $cmd\n";
@@ -242,7 +246,7 @@ if (false) {
     if ($desc->scoring == 'ad4') {
         $dir_maps = "$dir/maps";
         @mkdir($dir_maps);
-        $maps_phys = sandbox_log_to_phys($user, $desc->maps);
+        $maps_phys = sandbox_path($user, $desc->maps);
         if (!$maps_phys) die("no maps file $desc->maps");
         $cmd = sprintf("unzip -q %s -d %s", $maps_phys, $dir_maps);
         //echo "maps cmd: $cmd\n";

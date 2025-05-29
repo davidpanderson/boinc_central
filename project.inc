@@ -15,17 +15,6 @@ require_once("../inc/util.inc");
 define("PROJECT", "BOINC Central");
 define("COPYRIGHT_HOLDER", "UC Berkeley");
 
-//-------------- web-based job submission
-// app name, script, logo, assim_move
-$buda = ['buda', 'buda.php', 'images/docker2.png', true];
-$autodock = ['autodock', 'autodock.php?s=ad4', 'images/autodock.png', true];
-$vina = ['autodock', 'autodock.php?s=vina', 'images/vina.png', true];
-$vinardo = ['autodock', 'autodock.php?s=vinardo', 'images/vinardo.png', true];
-$web_apps = [
-    'Biomedical apps' => [$autodock, $vina, $vinardo],
-    'Universal Docker app' => [$buda]
-];
-
 //-------------- URLs and directories
 
 $master_url = parse_config(get_config(), "<master_url>");
@@ -63,6 +52,7 @@ define("POST_REPORT_EMAILS", "moderator1@$master_url|moderator2@$master_url");
 //define("STYLESHEET", "aaa.css");
 //define("STYLESHEET2", "bbb.css");
 define("DARK_MODE", true);
+define("SHORTCUT_ICON", "img/f2.gif");
 
 //-------------- enable/disable web features
 
@@ -71,7 +61,7 @@ define("FORUM_QA_MERGED_MODE", true);
 define ("DISABLE_PROFILES", true);
     // enable profiles only after enabling reCAPTCHA
     // https://boinc.berkeley.edu/trac/wiki/ProtectionFromSpam
-define("USE_STOPFORUMSPAM", true);
+define("USE_STOPFORUMSPAM", false);
     // use http://www.stopforumspam.com to suppress spammer accounts
 define("RPC_DEBUG", false);
     // Enables PHP error messages in public Web RPCs
@@ -133,16 +123,22 @@ function project_banner($title, $prefix, $is_main) {
 //$fixed_navbar = true;
 
 function project_footer($show_return, $show_date, $prefix) {
-    // If you include any links, prepend URL with $prefix
-    //
-    echo '<br>
-        <a class="brand boinc-logo" href="http://boinc.berkeley.edu/"><img class="img-responsive center-block" src="'.secure_url_base().'img/pb_boinc.gif" alt="Powered by BOINC"></a>
-        <div class="form-group"></div>
-        <p class="text-center"> &copy;'.gmdate("Y ").COPYRIGHT_HOLDER.'</p>
-    ';
+    echo sprintf(
+        '<center><a href="%s"><img src=%s/%s alt="%s"></a></center>',
+        'https://boinc.berkeley.edu',
+        secure_url_base(),
+        'img/pb_boinc.gif',
+        'Powered by BOINC'
+    );
+    echo sprintf('<p><center>&copy; %s %s</center>',
+        gmdate("Y "),
+        COPYRIGHT_HOLDER
+    );
     if ($show_date) {
-        $t = time_str(time());
-        echo "<center><small>".tra("Generated")." $t</small><center>\n";
+        echo sprintf('<center><small>%s %s</small><center>',
+            tra('Generated'),
+            time_str(time())
+        );
     }
 }
 

@@ -6,8 +6,8 @@ function form() {
     page_head('Apply to BOINC Central');
     form_start('apply.php', 'get');
     form_input_hidden('submit', 1);
-    form_input_text('Institution:', 'institution');
-    form_input_text('URL of page identifying you there:', 'url');
+    form_input_text('Institution (if any)', 'institution');
+    form_input_text('URL of page describing you and your research', 'url');
     form_input_text('Where did you hear about BOINC Central?', 'hear');
     form_input_textarea('Research for which you need computing', 'research');
     form_submit('OK');
