@@ -24,10 +24,10 @@ function form($s, $user) {
     default: error_page('no scoring function');
     }
 
-    page_head("Submit Autodock jobs");
+    page_head_select2("Submit Autodock jobs");
     echo "<p>
         Scoring function: $n
-        <br><a href=autodock.php>Select other scoring function</a>.
+        <br><a href=autodock.php>Select a different scoring function</a>
         <p>* = required fields
     ";
     form_start("autodock.php");
@@ -39,14 +39,16 @@ function form($s, $user) {
         if (!preg_match('/.zip$/', $f)) continue;
         $sbitems[] = [$f, $f];
     }
-    $sb = "<br><small>Select .zip files in your <a href=sandbox.php>sandbox</a>.
-        <br>Use ctrl-click to select multiple files.</small>";
+    $sb = "<br><small>Select one or more .zip files in your <a href=sandbox.php>sandbox</a>.</small>";
     if ($s == 'ad4') {
-        form_select_multiple("* Maps$sb", 'maps', $sbitems);
+        //form_select_multiple("* Maps$sb", 'maps', $sbitems);
+        form_select2_multi("* Maps$sb", 'maps', $sbitems, null, "id=maps");
     } else {
-        form_select_multiple("* Receptors$sb", 'receptors', $sbitems);
+        //form_select_multiple("* Receptors$sb", 'receptors', $sbitems);
+        form_select2_multi("* Receptors$sb", 'receptors', $sbitems, null, "id=receptors");
     }
-    form_select_multiple("* Ligands$sb", 'ligands', $sbitems);
+    //form_select_multiple("* Ligands$sb", 'ligands', $sbitems);
+    form_select2_multi("* Ligands$sb", 'ligands', $sbitems, null, "id=ligands");
     if ($s != 'ad4') {
         form_general('* Center',
             "<input name=center_x placeholder=X>
@@ -257,7 +259,7 @@ if (false) {
     } else {
         $dir_receptors = "$dir/receptors";
         @mkdir($dir_receptors);
-        $receptors_phys = sandbox_log_to_phys($user, $desc->receptors);
+        $receptors_phys = sandbox_path($user, $desc->receptors);
         if (!$receptors_phys) die("no receptors file $desc->receptors");
         $cmd = sprintf("unzip -q %s -d %s", $receptors_phys, $dir_receptors);
         //echo "receptors cmd: $cmd\n";
