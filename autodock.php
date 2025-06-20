@@ -165,7 +165,6 @@ function make_job($desc, $batch_id, $seqno, $ligand, $other) {
     $job_name = sprintf('autodock_%d_%d', $batch_id, $seqno);
     $batch_dir = sprintf('submit/%d', $batch_id);
     $job_dir = sprintf('%s/%s', $batch_dir, $job_name);
-    echo "job dir: $job_dir\n";
     mkdir($job_dir);
     $desc2 = clone $desc;
     copy("$batch_dir/ligands/$ligand", "$job_dir/$ligand");
@@ -218,10 +217,11 @@ if (false) {
 } else {
     $now = time();
     $app = BoincApp::lookup("name='autodock'");
+    $batch_name = sprintf('autodock_batch_%s', time());
     $batch_id = BoincBatch::insert(
         sprintf(
             "(user_id, create_time, name, app_id, state) values (%d, %d, '%s', %d, %d)",
-            $user->id, $now, 'autodock batch',
+            $user->id, $now, $batch_name,
             $app->id, BATCH_STATE_IN_PROGRESS
         )
     );
@@ -229,6 +229,7 @@ if (false) {
 
     // make a temp dir for the batch
 
+    @mkdir('submit');
     $dir = sprintf('submit/%d', $batch_id);
     @mkdir($dir);
 
@@ -269,7 +270,6 @@ if (false) {
         //print_r($receptors);
     }
 
-    page_head('Jobs');
     // make a job for each combination of ligand and receptor
     //
     $seqno = 0;
@@ -301,11 +301,10 @@ if (false) {
     if ($user->seti_id) {
         $cmd .= " --target_user $user->id ";
     }
-    $cmd .= sprintf(' 2>&1 > html/user/submit/%d/cw_err.txt',
-        $batch_id
-    );
-    echo "<br>$cmd<br>";
-    echo "cw_string: [$cw_string]</br>";
+    $errfile = sprintf('html/user/submit/%d/cw_err.txt', $batch_id);
+    $cmd .= sprintf(' 2>&1 > %s', $errfile);
+    //echo "<br>$cmd<br>";
+    //echo "cw_string: [$cw_string]</br>";
     $h = popen($cmd, 'w');
     if ($h === false) error_page("can't run create_work");
     fwrite($h, $cw_string);
@@ -315,7 +314,7 @@ if (false) {
         $err = file_get_contents($errfile);
         echo "<pre>$err</pre>";
     }
-    page_tail();
+    header("Location: submit.php?action=query_batch&batch_id=$batch->id");
 }
 
 function action($user) {
@@ -424,13 +423,9 @@ function action($user) {
 }
 
 $user = get_logged_in_user();
-$up = has_file_access($user);
-if (!$up) error_page("no permissions");
 $app = BoincApp::lookup("name='autodock'");
 if (!$app) error_page("no app");
-if (!$up->submit_all) {
-    if (!has_submit_access($user, $app->id)) error_page("no app permissions");
-}
+if (!has_submit_access($user, $app->id)) error_page("no app permissions");
 
 //print_r($_GET);
 if (get_str('submit', true)) {
