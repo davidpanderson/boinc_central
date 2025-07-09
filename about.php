@@ -35,6 +35,7 @@ from the Scripps Research Institute.
 We build versions of these applications
 for a range of computing platforms:
 different operating systems, CPU types, and GPU types.
+We also support any application packaged using Docker.
 <li>
 Scientists from academic research institutions
 can submit batches of jobs for these applications

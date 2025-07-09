@@ -1,7 +1,7 @@
 <?php
 // This file is part of BOINC.
-// http://boinc.berkeley.edu
-// Copyright (C) 2008 University of California
+// https://boinc.berkeley.edu
+// Copyright (C) 2025 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -20,13 +20,13 @@
 // cases:
 // not logged in:
 //      Scientists: button
-//      Computer Owners: buttons
+//      Computer Owners: Join button
 // logged in, not submitter
 //      Scientists: button
 //      recent work summary
 //      Continue to home page
 // logged in, submitter
-//      Job submission, File sandbox buttons
+//      navbar: Job submission menu
 //      recent work summary
 //      Continue to home page
 
@@ -66,30 +66,17 @@ function top() {
 function intro() {
     global $user;
     echo "<p>
-<b>BOINC Central</b> is based on 
-<a href=https://boinc.berkeley.edu>BOINC</a> - a system for
-'volunteer computing', allowing people around the world
-to donate computing power to science research.
-BOINC Central lets scientists access the power of volunteer computing
-without operating a BOINC server.
+<b>BOINC Central</b> uses
+<a href=https://boinc.berkeley.edu>BOINC</a> -
+a system for 'volunteer computing',
+allowing people to donate computing power to science research.
+We let scientists in multiple areas
+access the power of volunteer computing
+without having to create their own BOINC project.
 <p>
-BOINC Central:
-<ul>
-<li>
-supports widely-used science applications, such as
-<a href=https://autodock.scripps.edu/>Autodock Vina</a>
-from the Scripps Research Institute.
-<li>
-supports <a href=https://github.com/BOINC/boinc/wiki/BUDA-overview>any app packaged with Docker</a>.
-<li>
-lets scientists from all academic institutions
-submit jobs for these applications.
-<li>
-is operated by
+We're operated by
 <a href=https://boinc.berkeley.edu>the U.C. Berkeley BOINC project</a>.
-</ul>
 <p>
-<a href=show_apps.php>Show apps currently supported by BOINC Central.</a>
 ";
 }
 
@@ -118,7 +105,7 @@ function show_user_info($user) {
         }
     }
     echo "<p><p>";
-    echo sprintf('<a href=home.php class="btn btn-success" %s>%s</a>
+    echo sprintf('<a href=home.php class="btn btn-success" %s><font size=+1>%s</font></a>
         ',
         button_style(),
         tra('Continue to your home page')
@@ -140,20 +127,25 @@ function show_user_info($user) {
     echo "</ul>\n";
 }
 
+// user is not logged in.
+//
 function show_join_button() {
     global $no_web_account_creation;
     echo '
+        <hr>
         <p>
-        <font size=+1><nobr>Computer owners:</nobr></font>
+        <h3>Computer owners:</h3>
+        <p>
+        Support computational research in
+        <a href=show_apps.php>multiple areas</a>.
+        <p>
     ';
-    if (!$no_web_account_creation) {
-        echo sprintf(
-            '<a href="signup.php" %s class="btn"><font size=+1>%s</font></a>',
-            button_style(),
-            tra('Join %1', PROJECT)
-        );
-    }
-    echo sprintf('<p>%s <a href=%s>%s</a><p>',
+    echo sprintf(
+        '<a href="signup.php" %s class="btn"><font size=+1>%s</font></a>',
+        button_style(),
+        tra('Join %1', PROJECT)
+    );
+    echo sprintf('<p><p>%s <a href=%s>%s</a><p>',
         tra('Already joined?'),
         'login_form.php',
         tra('Log in')
@@ -161,12 +153,31 @@ function show_join_button() {
 }
 
 function scientist_button() {
+    echo '<hr><h3>Scientists:</h3>';
+    echo "
+        <p>
+        Need high-throughput computing power
+        and can't afford the high cost of commercial clouds?
+        We may be able to help,
+        by giving you access to thousands of computers at no charge.
+        We provide computing to independent researchers
+        as well as those from academic institutions.
+        <p>
+        We support <a href=https://github.com/BOINC/boinc/wiki/BUDA-overview>any application packaged with Docker</a>,
+        as well as widely-used science applications like
+        <a href=https://autodock.scripps.edu/>Autodock Vina</a>
+        from the Scripps Research Institute.
+        <p>
+    ";
     echo sprintf(
-        '<font size=+1>Scientists:</font>
-            <a href="scientist.php" %s class="btn btn-success"><font size=+1>Compute with BOINC Central</font></a>
+        '<a href="scientist.php" %s class="btn btn-success"><font size=+1>Apply for computing</font></a>
         ',
         button_style()
     );
+    echo "
+        <p>
+        ... or <a href=https://boinc.berkeley.edu/anderson/>contact us</a>.
+    ";
 }
 
 function scientist_links() {
@@ -183,12 +194,12 @@ function left(){
             global $no_web_account_creation, $master_url, $project_id;
             if ($user) {
                 intro();
+                show_user_info($user);
                 if (BoincUserSubmit::lookup_userid($user->id)) {
                     scientist_links();
                 } else {
                     scientist_button();
                 }
-                show_user_info($user);
             } else {
                 intro();
                 show_join_button();
