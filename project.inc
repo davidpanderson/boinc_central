@@ -112,6 +112,7 @@ function make_php_mailer() {
 //
 function project_banner($title, $prefix, $is_main) {
     error_reporting(E_ALL);
+    echo "<font size=+1>\n";
     if ($is_main) {
         //echo '<img class="img-responsive" style="width:100%" src="img/water.jpg">';
     }
