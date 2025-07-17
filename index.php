@@ -70,7 +70,8 @@ function intro() {
 <a href=https://boinc.berkeley.edu>BOINC</a> -
 a system for 'volunteer computing',
 allowing people to donate computing power to science research.
-We let scientists in multiple areas
+We let scientists in
+<a href=show_apps.php>multiple areas</a>
 access the power of volunteer computing
 without having to create their own BOINC project.
 <p>
@@ -168,6 +169,8 @@ function scientist_button() {
         <a href=https://autodock.scripps.edu/>Autodock Vina</a>
         from the Scripps Research Institute.
         <p>
+        See <a href=videos.php>video tutorials</a> on using Autodock in BOINC Central.
+        <p>
     ";
     echo sprintf(
         '<a href="scientist.php" %s class="btn btn-success"><font size=+1>Apply for computing</font></a>
@@ -180,10 +183,17 @@ function scientist_button() {
     ";
 }
 
-function scientist_links() {
-    //echo '<hr>';
-    //show_button('submit.php', 'Job submission');
-    //show_button('sandbox.php', 'File sandbox');
+// user is registered as a job submitter
+
+function scientist_info() {
+    echo "<hr>
+        <p>
+        You're registered as a job submitter.
+        Use the commands under the 'Job submission' menu
+        to manage files and submit jobs.
+        <p>
+        See <a href=videos.php>video tutorials</a>.
+    ";
 }
 
 function left(){
@@ -196,7 +206,7 @@ function left(){
                 intro();
                 show_user_info($user);
                 if (BoincUserSubmit::lookup_userid($user->id)) {
-                    scientist_links();
+                    scientist_info();
                 } else {
                     scientist_button();
                 }
