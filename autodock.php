@@ -270,6 +270,34 @@ if (false) {
         //print_r($receptors);
     }
 
+    // make sure there are any jobs
+    //
+    $abort = false;
+    if (!$ligands) {
+        $abort = true;
+    }
+    if ($desc->scoring == 'ad4') {
+        if (!$maps) {
+            $abort = true;
+        }
+    } else {
+        if (!$receptors) {
+            $abort = true;
+        }
+    }
+    if ($abort) {
+        BoincBatch::delete_batch($batch_id);
+        @rmdir($dir);
+
+        page_head("No jobs created");
+        echo "Either no ligands were specified,
+            or no maps, or no receptors.
+            Check your .zip files.
+        ";
+        page_tail();
+        exit;
+    }
+
     // make a job for each combination of ligand and receptor
     //
     $seqno = 0;
