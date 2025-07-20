@@ -243,6 +243,10 @@ if (false) {
     //echo "ligands cmd: $cmd\n";
     $x = system($cmd, $retval);
     if ($retval && $retval != 1) die("ERROR: $cmd: $retval; $x\n");
+    
+    $d = contains_single_dir($dir_ligands);
+    if ($d) $dir_ligands = "$dir_ligands/$d";
+
     $ligands = get_files($dir_ligands, '.pdbqt');
     //print_r($ligands);
 
@@ -255,6 +259,10 @@ if (false) {
         //echo "maps cmd: $cmd\n";
         $x = system($cmd, $retval);
         if ($retval && $retval != 1) die("ERROR: $cmd: $retval; $x\n");
+
+        $d = contains_single_dir($dir_maps);
+        if ($d) $dir_maps = "$dir_maps/$d";
+
         $maps = get_files($dir_maps, '.pdbqt');
         //print_r($maps);
     } else {
@@ -266,6 +274,10 @@ if (false) {
         //echo "receptors cmd: $cmd\n";
         $x = system($cmd, $retval);
         if ($retval && $retval != 1) die("ERROR: $cmd: $retval; $x\n");
+
+        $d = contains_single_dir($dir_receptors);
+        if ($d) $dir_receptors = "$dir_receptors/$d";
+
         $receptors = get_files($dir_receptors, '.pdbqt');
         //print_r($receptors);
     }
