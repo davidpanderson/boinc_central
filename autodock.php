@@ -4,6 +4,23 @@ require_once("../inc/util.inc");
 require_once("../inc/sandbox.inc");
 require_once("../inc/submit_util.inc");
 
+// if the directory contains a single item, and it's a dir, return its name.
+//
+function contains_single_dir($dir) {
+    $items = scandir($dir);
+    $child = null;
+    foreach ($items as $f) {
+        if ($f[0] == '.') continue;
+        if (is_dir("$dir/$f")) {
+            if ($child) return null;
+            $child = $f;
+        } else {
+            return null;
+        }
+    }
+    return $child;
+}
+
 function form($s, $user) {
     if (!$s) {
         page_head("Submit Autodock jobs");
