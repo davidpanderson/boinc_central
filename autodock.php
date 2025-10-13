@@ -222,6 +222,18 @@ function make_job($desc, $batch_id, $seqno, $ligand, $other) {
     return "--command_line 'input.zip output.zip' $job_name.zip\n";
 }
 
+// call this if error happened after creating the batch.
+//
+function bail($batch_id, $dir, $msg) {
+    BoincBatch::delete_batch($batch_id);
+    @rmdir($dir);
+
+    page_head("No jobs created");
+    echo $msg;
+    page_tail();
+    exit;
+}
+
 // create a batch and jobs for the given batch descriptor
 // input files are in user sandbox
 //
@@ -315,16 +327,12 @@ if (false) {
         }
     }
     if ($abort) {
-        BoincBatch::delete_batch($batch_id);
-        @rmdir($dir);
-
-        page_head("No jobs created");
-        echo "Either no ligands were specified,
+        bail($batch_id, $dir,
+            "Either no ligands were specified,
             or no maps, or no receptors.
             Check your .zip files.
-        ";
-        page_tail();
-        exit;
+            "
+        );
     }
 
     // make a job for each combination of ligand and receptor
@@ -344,12 +352,18 @@ if (false) {
             }
         }
     }
+
+    if ($seqno > 10 && $user->seti_id) {
+        bail($batch_id, $dir,
+            "Batches with > 10 jobs are not allowed if 'use only my computers' is set"
+        );
+    }
+
     $batch = BoincBatch::lookup_id($batch_id);
-    if ($batch) {
-        $batch->update("njobs=$seqno");
-    } else {
+    if (!$batch) {
         die ("no batch $batch_id");
     }
+    $batch->update("njobs=$seqno");
 
     $cmd = sprintf(
         'cd ../..; bin/create_work --appname autodock --batch %d --stdin ',
