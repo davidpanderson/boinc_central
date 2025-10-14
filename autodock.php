@@ -115,10 +115,16 @@ function check_double($name, $min=null, $max=null) {
     $x = get_str($name, true);
     if ($x === null) return null;
     if ($x === '') return null;
-    if (!is_numeric($x)) die("$name is not numeric");
+    if (!is_numeric($x)) {
+        error_page("$name is not numeric");
+    }
     $x = (double)$x;
-    if ($min!==null && $x < $min) die("$name is too small");
-    if ($max!==null && $x > $max) die("$name is too big");
+    if ($min!==null && $x < $min) {
+        error_page("$name is too small");
+    }
+    if ($max!==null && $x > $max) {
+        error_page("$name is too big");
+    }
     return $x;
 }
 
@@ -126,19 +132,40 @@ function check_int($name, $min=null, $max=null) {
     $x = get_str($name, true);
     if ($x === null) return null;
     if ($x === '') return null;
-    if (!ctype_digit($x)) die("$name is not integer");
+    if (!ctype_digit($x)) {
+        error_page("$name is not integer");
+    }
     $x = (int)$x;
-    if ($min!==null && $x < $min) die("$name is too small");
-    if ($max!==null && $x > $max) die("$name is too big");
+    if ($min!==null && $x < $min) {
+        error_page("$name is too small");
+    }
+    if ($max!==null && $x > $max) {
+        error_page("$name is too big");
+    }
     return $x;
 }
 
-function get_files($dir, $suffix) {
+// this is in PHP 8
+function str_ends_with($haystack, $needle) {
+    $length = strlen( $needle );
+    if (!$length) {
+        return true;
+    }
+    return substr($haystack, -$length) === $needle;
+}
+
+function get_files($dir, $suffix, $type) {
     $files = scandir($dir);
     $out = [];
     foreach ($files as $f) {
         if ($f[0] == '.') continue;
-        if (!strstr($f, '.pdbqt')) continue;
+        if (!str_ends_with($f, $suffix)) {
+            error_page(
+                "Your $type file has a file $f.
+                Only files ending in $suffix are allowed.
+                "
+            );
+        }
         $out[] = $f;
     }
     return $out;
@@ -224,9 +251,9 @@ function make_job($desc, $batch_id, $seqno, $ligand, $other) {
 
 // call this if error happened after creating the batch.
 //
-function bail($batch_id, $dir, $msg) {
-    BoincBatch::delete_batch($batch_id);
-    @rmdir($dir);
+function bail($batch, $dir, $msg) {
+    $batch->delete();
+    //@rmdir($dir);
 
     page_head("No jobs created");
     echo $msg;
@@ -240,10 +267,6 @@ function bail($batch_id, $dir, $msg) {
 function make_batch($desc, $user) {
     // make a batch
     //
-if (false) {
-    $batch_id = 0;
-    system('rm -rf submit/0/*');
-} else {
     $now = time();
     $app = BoincApp::lookup("name='autodock'");
     $batch_name = sprintf('autodock_batch_%s', time());
@@ -254,7 +277,10 @@ if (false) {
             $app->id, BATCH_STATE_IN_PROGRESS
         )
     );
-}
+    $batch = BoincBatch::lookup_id($batch_id);
+    if (!$batch) {
+        die ("no batch $batch_id");
+    }
 
     // make a temp dir for the batch
 
@@ -267,72 +293,79 @@ if (false) {
     $dir_ligands = "$dir/ligands";
     @mkdir($dir_ligands);
     $ligands_phys = sandbox_path($user, $desc->ligands);
-    if (!$ligands_phys) die("no ligands file $desc->ligands");
+    if (!$ligands_phys) {
+        error_page("no ligands file $desc->ligands");
+    }
     $cmd = sprintf("unzip -q %s -d %s", $ligands_phys, $dir_ligands);
     //echo "ligands cmd: $cmd\n";
     $x = system($cmd, $retval);
-    if ($retval && $retval != 1) die("ERROR: $cmd: $retval; $x\n");
+    if ($retval && $retval != 1) {
+        error_page("Command failed: $cmd: $retval; $x\n");
+    }
     
     $d = contains_single_dir($dir_ligands);
     if ($d) $dir_ligands = "$dir_ligands/$d";
 
-    $ligands = get_files($dir_ligands, '.pdbqt');
+    $ligands = get_files($dir_ligands, '.pdbqt', 'ligands');
     //print_r($ligands);
 
     if ($desc->scoring == 'ad4') {
         $dir_maps = "$dir/maps";
         @mkdir($dir_maps);
         $maps_phys = sandbox_path($user, $desc->maps);
-        if (!$maps_phys) die("no maps file $desc->maps");
+        if (!$maps_phys) {
+            error_page("no maps file $desc->maps");
+        }
         $cmd = sprintf("unzip -q %s -d %s", $maps_phys, $dir_maps);
         //echo "maps cmd: $cmd\n";
         $x = system($cmd, $retval);
-        if ($retval && $retval != 1) die("ERROR: $cmd: $retval; $x\n");
+        if ($retval && $retval != 1) {
+            error_page("Command failed: $cmd: $retval; $x\n");
+        }
 
         $d = contains_single_dir($dir_maps);
         if ($d) $dir_maps = "$dir_maps/$d";
 
-        $maps = get_files($dir_maps, '.pdbqt');
+        $maps = get_files($dir_maps, '.pdbqt', 'maps');
         //print_r($maps);
     } else {
         $dir_receptors = "$dir/receptors";
         @mkdir($dir_receptors);
         $receptors_phys = sandbox_path($user, $desc->receptors);
-        if (!$receptors_phys) die("no receptors file $desc->receptors");
+        if (!$receptors_phys) {
+            error_page("no receptors file $desc->receptors");
+        }
         $cmd = sprintf("unzip -q %s -d %s", $receptors_phys, $dir_receptors);
         //echo "receptors cmd: $cmd\n";
         $x = system($cmd, $retval);
-        if ($retval && $retval != 1) die("ERROR: $cmd: $retval; $x\n");
+        if ($retval && $retval != 1) {
+            error_page("Command failed: $cmd: $retval; $x\n");
+        }
 
         $d = contains_single_dir($dir_receptors);
         if ($d) $dir_receptors = "$dir_receptors/$d";
 
-        $receptors = get_files($dir_receptors, '.pdbqt');
+        $receptors = get_files($dir_receptors, '.pdbqt', 'receptors');
         //print_r($receptors);
     }
 
     // make sure there are any jobs
     //
-    $abort = false;
+    $msg = null;
     if (!$ligands) {
-        $abort = true;
+        $msg = 'No ligands specified.';
     }
     if ($desc->scoring == 'ad4') {
         if (!$maps) {
-            $abort = true;
+            $msg = 'No maps specified.';
         }
     } else {
         if (!$receptors) {
-            $abort = true;
+            $msg = 'No receptors specified.';
         }
     }
-    if ($abort) {
-        bail($batch_id, $dir,
-            "Either no ligands were specified,
-            or no maps, or no receptors.
-            Check your .zip files.
-            "
-        );
+    if ($msg) {
+        bail($batch, $dir, "$msg Check your .zip files.");
     }
 
     // make a job for each combination of ligand and receptor
@@ -354,15 +387,11 @@ if (false) {
     }
 
     if ($seqno > 10 && $user->seti_id) {
-        bail($batch_id, $dir,
+        bail($batch, $dir,
             "Batches with > 10 jobs are not allowed if 'use only my computers' is set"
         );
     }
 
-    $batch = BoincBatch::lookup_id($batch_id);
-    if (!$batch) {
-        die ("no batch $batch_id");
-    }
     $batch->update("njobs=$seqno");
 
     $cmd = sprintf(
