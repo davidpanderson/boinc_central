@@ -1,8 +1,32 @@
 <?php
 
+// Form and handler for submitting Autodock jobs
+//
+// The user selects a scoring type (ad4/vina/vinardo)
+// and two zipped directories from their sandbox
+//
+// vina/vinardo:
+// The directories (ligands and receptors) can contain only .pdbqt files.
+// A job is created for each combination of ligand and receptor.
+//
+// ad4:
+// The ligand directory is as above.
+// The 2nd dir (maps) has sets of files
+// foo.pdbqt [foo.X.map foo.glg foo.gpf foo.X.fld foo.X.xyz]
+// A job is created for each combo of ligand and foo.pdbqt.
+// Its input files include foo.*
+//
+// If a file with unexpected name or type is found, error out.
+
 require_once("../inc/util.inc");
 require_once("../inc/sandbox.inc");
 require_once("../inc/submit_util.inc");
+
+// allowed file types
+
+define('MAP_TYPES', ['.map', '.glg', '.gpf', '.fld', '.xyz', '.pdbqt']);
+define('LIGAND_TYPES', ['.pdbqt']);
+define('RECEPTOR_TYPES', ['.pdbqt']);
 
 // if the directory contains a single item, and it's a dir, return its name.
 //
@@ -19,6 +43,10 @@ function contains_single_dir($dir) {
         }
     }
     return $child;
+}
+
+function small_line($msg) {
+    return "<br><small>$msg</small>";
 }
 
 function form($s, $user) {
@@ -42,12 +70,16 @@ function form($s, $user) {
     }
 
     page_head_select2("Submit Autodock jobs");
-    echo "<p>
+    echo "
+        <p>
+        For detailed instructions click
+        <a href=https://github.com/BOINC/boinc-autodock-vina/wiki>here</a>.
+        <hr>
         Scoring function: $n
         <br><a href=autodock.php>Select a different scoring function</a>
-        <p>* = required fields
     ";
     form_start("autodock.php");
+    form_general('* = required fields', '');
     form_input_hidden('scoring', $s);
 
     $sbfiles = sandbox_file_names($user);
@@ -56,16 +88,23 @@ function form($s, $user) {
         if (!preg_match('/.zip$/', $f)) continue;
         $sbitems[] = [$f, $f];
     }
-    $sb = "<br><small>Select one or more .zip files in your <a href=sandbox.php>sandbox</a>.</small>";
+    $sb = small_line('Select a zipped directory (.zip) in your <a href=sandbox.php>sandbox</a>');
+
     if ($s == 'ad4') {
-        //form_select_multiple("* Maps$sb", 'maps', $sbitems);
-        form_select2_multi("* Maps$sb", 'maps', $sbitems, null, "id=maps");
+        $mt = implode(', ', MAP_TYPES);
+        $mt = small_line("It must contain files of type $mt");
+        //form_select2_multi("* Maps $sb $mt", 'maps', $sbitems, null, "id=maps");
+        form_select("* Maps $sb $mt", 'maps', $sbitems, null, "id=maps");
     } else {
-        //form_select_multiple("* Receptors$sb", 'receptors', $sbitems);
-        form_select2_multi("* Receptors$sb", 'receptors', $sbitems, null, "id=receptors");
+        $mt = implode(', ', RECEPTOR_TYPES);
+        $mt = small_line("It must contain files of type $mt");
+        //form_select2_multi("* Receptors $sb $mt", 'receptors', $sbitems, null, "id=receptors");
+        form_select("* Receptors $sb $mt", 'receptors', $sbitems, null, "id=receptors");
     }
-    //form_select_multiple("* Ligands$sb", 'ligands', $sbitems);
-    form_select2_multi("* Ligands$sb", 'ligands', $sbitems, null, "id=ligands");
+    $mt = implode(', ', LIGAND_TYPES);
+    $mt = small_line("It must contain files of type $mt");
+    //form_select2_multi("* Ligands $sb $mt", 'ligands', $sbitems, null, "id=ligands");
+    form_select("* Ligands $sb $mt", 'ligands', $sbitems, null, "id=ligands");
     if ($s != 'ad4') {
         form_general('* Center',
             "<input name=center_x placeholder=X>
@@ -146,6 +185,7 @@ function check_int($name, $min=null, $max=null) {
 }
 
 // this is in PHP 8
+//
 function str_ends_with($haystack, $needle) {
     $length = strlen( $needle );
     if (!$length) {
@@ -154,19 +194,33 @@ function str_ends_with($haystack, $needle) {
     return substr($haystack, -$length) === $needle;
 }
 
-function get_files($dir, $suffix, $type) {
+// return list of .pdbqt files in the dir.
+// Ignore other files, but error out if they have suffixes not in $suffixes
+//
+function get_files($dir, $suffixes, $type) {
     $files = scandir($dir);
     $out = [];
     foreach ($files as $f) {
         if ($f[0] == '.') continue;
-        if (!str_ends_with($f, $suffix)) {
+        if (str_ends_with($f, '.pdbqt')) {
+            $out[] = $f;
+            continue;
+        }
+        $found = false;
+        foreach ($suffixes as $suffix) {
+            if (str_ends_with($f, $suffix)) {
+                $found = true;
+                break;
+            }
+        }
+        if (!$found) {
+            $s = implode(', ', $suffixes);
             error_page(
-                "Your $type file has a file $f.
-                Only files ending in $suffix are allowed.
+                "Your $type directory has a file $f.
+                Only file types in [$s] are allowed.
                 "
             );
         }
-        $out[] = $f;
     }
     return $out;
 }
@@ -203,31 +257,36 @@ function copy_map_files($src_dir, $fname, $dst_dir) {
 // - stage the zip file
 // - create the job
 //
+// $other is the name of map or receptor file
+//
 // Return a line to pass to stdin of create_work
 //
-function make_job($desc, $batch_id, $seqno, $ligand, $other) {
+function make_job($batch_desc, $batch_id, $seqno, $ligand, $other) {
     $job_name = sprintf('autodock_%d_%d', $batch_id, $seqno);
     $batch_dir = sprintf('submit/%d', $batch_id);
     $job_dir = sprintf('%s/%s', $batch_dir, $job_name);
     mkdir($job_dir);
-    $desc2 = clone $desc;
+
+    // the batch desc has parameters that we need to pass
+    //
+    $job_desc = clone $batch_desc;
     copy("$batch_dir/ligands/$ligand", "$job_dir/$ligand");
-    $desc2->ligands = $ligand;
-    if ($desc->scoring == 'ad4') {
+    $job_desc->ligands = $ligand;
+    if ($job_desc->scoring == 'ad4') {
         copy_map_files("$batch_dir/maps", $other, $job_dir);
-        $desc2->maps = explode('.pdbqt', $other)[0];
+        $job_desc->maps = explode('.pdbqt', $other)[0];
     } else {
         copy("$batch_dir/receptors/$other", "$job_dir/$other");
-        $desc2->receptors = $other;
+        $job_desc->receptors = $other;
     }
 
-    $desc2->seed = mt_rand();
-    $desc2->out = sprintf('%s_%s_%s_out.pdbqt',
+    $job_desc->seed = mt_rand();
+    $job_desc->out = sprintf('%s_%s_%s_out.pdbqt',
         explode('.pdbqt', $ligand)[0],
         explode('.pdbqt', $other)[0],
-        $desc->scoring
+        $job_desc->scoring
     );
-    $j = json_encode($desc2, JSON_PRETTY_PRINT);
+    $j = json_encode($job_desc, JSON_PRETTY_PRINT);
     file_put_contents("$job_dir/desc.json", $j);
     $cmd = sprintf('zip -j -q -r %s.zip %s/*', $job_dir, $job_dir);
         // -j means archive just the files, not the dir structure
@@ -306,7 +365,7 @@ function make_batch($desc, $user) {
     $d = contains_single_dir($dir_ligands);
     if ($d) $dir_ligands = "$dir_ligands/$d";
 
-    $ligands = get_files($dir_ligands, '.pdbqt', 'ligands');
+    $ligands = get_files($dir_ligands, LIGAND_TYPES, 'ligands');
     //print_r($ligands);
 
     if ($desc->scoring == 'ad4') {
@@ -326,7 +385,7 @@ function make_batch($desc, $user) {
         $d = contains_single_dir($dir_maps);
         if ($d) $dir_maps = "$dir_maps/$d";
 
-        $maps = get_files($dir_maps, '.pdbqt', 'maps');
+        $maps = get_files($dir_maps, MAP_TYPES, 'maps');
         //print_r($maps);
     } else {
         $dir_receptors = "$dir/receptors";
@@ -345,7 +404,7 @@ function make_batch($desc, $user) {
         $d = contains_single_dir($dir_receptors);
         if ($d) $dir_receptors = "$dir_receptors/$d";
 
-        $receptors = get_files($dir_receptors, '.pdbqt', 'receptors');
+        $receptors = get_files($dir_receptors, RECEPTOR_TYPES, 'receptors');
         //print_r($receptors);
     }
 
@@ -375,13 +434,17 @@ function make_batch($desc, $user) {
     if ($desc->scoring == 'ad4') {
         foreach ($ligands as $ligand) {
             foreach ($maps as $map) {
-                $cw_string .= make_job($desc, $batch_id, $seqno++, $ligand, $map);
+                $cw_string .= make_job(
+                    $desc, $batch_id, $seqno++, $ligand, $map
+                );
             }
         }
     } else {
         foreach ($ligands as $ligand) {
             foreach ($receptors as $receptor) {
-                $cw_string .= make_job($desc, $batch_id, $seqno++, $ligand, $receptor);
+                $cw_string .= make_job(
+                    $desc, $batch_id, $seqno++, $ligand, $receptor
+                );
             }
         }
     }
@@ -417,109 +480,114 @@ function make_batch($desc, $user) {
     header("Location: submit.php?action=query_batch&batch_id=$batch->id");
 }
 
+// parse form args, create batch descriptor, call make_batch()
+//
 function action($user) {
-    $x = new stdClass;
+    $desc = new stdClass;
     $s = get_str('scoring');
-    $x->scoring = $s;
+    $desc->scoring = $s;
 
     $y = get_str('maps', true);
     if ($y) {
-        $x->maps = $y[0];
+        //$desc->maps = $y[0];
+        $desc->maps = $y;
     } else if ($s == 'ad4') {
         error_page('no map specified');
     }
 
     $y = get_str('receptors', true);
     if ($y) {
-        $x->receptors = $y[0];
+        //$desc->receptors = $y[0];
+        $desc->receptors = $y;
     } else if ($s != 'ad4') {
         error_page('no receptor specified');
     }
 
     $y = get_str('ligands', true);
     if ($y) {
-        $x->ligands = $y[0];
+        //$desc->ligands = $y[0];
+        $desc->ligands = $y;
     } else {
         error_page('no ligands specified');
     }
 
     $y = check_double('center_x');
     if ($y === null and $s != 'ad4') error_page('missing center');
-    if ($y !== null) $x->center_x = $y;
+    if ($y !== null) $desc->center_x = $y;
     $y = check_double('center_y');
     if ($y === null and $s != 'ad4') error_page('missing center');
-    if ($y !== null) $x->center_y = $y;
+    if ($y !== null) $desc->center_y = $y;
     $y = check_double('center_z');
     if ($y === null and $s != 'ad4') error_page('missing center');
-    if ($y !== null) $x->center_z = $y;
+    if ($y !== null) $desc->center_z = $y;
 
     $y = check_double('size_x');
     if ($y === null and $s != 'ad4') error_page('missing size');
-    if ($y !== null) $x->size_x = $y;
+    if ($y !== null) $desc->size_x = $y;
     $y = check_double('size_y');
     if ($y === null and $s != 'ad4') error_page('missing size');
-    if ($y !== null) $x->size_y = $y;
+    if ($y !== null) $desc->size_y = $y;
     $y = check_double('size_z');
     if ($y === null and $s != 'ad4') error_page('missing size');
-    if ($y !== null) $x->size_z = $y;
+    if ($y !== null) $desc->size_z = $y;
 
     $y = check_double('weight_gauss1');
-    if ($y !== null) $x->weight_gauss1 = $y;
+    if ($y !== null) $desc->weight_gauss1 = $y;
 
     $y = check_double('weight_gauss2');
-    if ($y !== null) $x->weight_gauss2 = $y;
+    if ($y !== null) $desc->weight_gauss2 = $y;
 
     $y = check_double('weight_repulsion');
-    if ($y !== null) $x->weight_repulsion = $y;
+    if ($y !== null) $desc->weight_repulsion = $y;
 
     $y = check_double('weight_hydrophobic');
-    if ($y !== null) $x->weight_hydrophobic = $y;
+    if ($y !== null) $desc->weight_hydrophobic = $y;
 
     $y = check_double('weight_hydrogen');
-    if ($y !== null) $x->weight_hydrogen = $y;
+    if ($y !== null) $desc->weight_hydrogen = $y;
 
     $y = check_double('weight_vdw');
-    if ($y !== null) $x->weight_vdw = $y;
+    if ($y !== null) $desc->weight_vdw = $y;
 
     $y = check_double('weight_hb');
-    if ($y) $x->weight_hb = $y;
+    if ($y) $desc->weight_hb = $y;
 
     $y = check_double('weight_elec');
-    if ($y) $x->weight_elec = $y;
+    if ($y) $desc->weight_elec = $y;
 
     $y = check_double('weight_dsolv');
-    if ($y) $x->weight_dsolv = $y;
+    if ($y) $desc->weight_dsolv = $y;
 
     $y = check_double('weight_rot');
-    if ($y) $x->weight_rot = $y;
+    if ($y) $desc->weight_rot = $y;
 
     $y = (boolean)get_str('force_even_voxels', true);
-    if ($y) $x->force_even_voxels = $y;
+    if ($y) $desc->force_even_voxels = $y;
 
     $y = check_double('weight_glue');
-    if ($y) $x->weight_glue = $y;
+    if ($y) $desc->weight_glue = $y;
 
     $y = check_int('exhaustiveness');
-    if ($y) $x->exhaustiveness = $y;
+    if ($y) $desc->exhaustiveness = $y;
 
     $y = check_int('max_evals');
-    if ($y) $x->max_evals = $y;
+    if ($y) $desc->max_evals = $y;
 
     $y = check_int('num_modes');
-    if ($y) $x->num_modes = $y;
+    if ($y) $desc->num_modes = $y;
 
     $y = check_double('min_rmsd');
-    if ($y) $x->min_rmsd = $y;
+    if ($y) $desc->min_rmsd = $y;
 
     $y = check_double('energy_range');
-    if ($y) $x->energy_range = $y;
+    if ($y) $desc->energy_range = $y;
 
     $y = check_double('spacing');
-    if ($y) $x->spacing = $y;
+    if ($y) $desc->spacing = $y;
 
     //echo "<pre>";
-    //echo json_encode($x, JSON_PRETTY_PRINT);
-    make_batch($x, $user);
+    //echo json_encode($desc, JSON_PRETTY_PRINT);
+    make_batch($desc, $user);
 }
 
 $user = get_logged_in_user();
