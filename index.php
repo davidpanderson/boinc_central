@@ -158,18 +158,18 @@ function scientist_button() {
     echo "
         <p>
         Need high-throughput computing power
-        and can't afford the high cost of commercial clouds?
+        and can't afford commercial clouds?
         We may be able to help,
         by giving you access to thousands of computers at no charge.
         We provide computing to independent researchers
         as well as those from academic institutions.
         <p>
-        We support <a href=https://github.com/BOINC/boinc/wiki/BUDA-overview>any application packaged with Docker</a>,
-        as well as widely-used science applications like
-        <a href=https://autodock.scripps.edu/>Autodock Vina</a>
+        BOINC Central currently supports
+        <ul>
+        <li> <a href=https://github.com/BOINC/boinc/wiki/BUDA-overview>Any application packaged with Docker</a>.
+        <li> <a href=https://github.com/BOINC/boinc-autodock-vina/wiki>Autodock</a>
         from the Scripps Research Institute.
-        <p>
-        See <a href=videos.php>video tutorials</a> on using Autodock in BOINC Central.
+        </ul>
         <p>
     ";
     echo sprintf(
@@ -191,8 +191,6 @@ function scientist_info() {
         You're registered as a job submitter.
         Use the commands under the 'Job submission' menu
         to manage files and submit jobs.
-        <p>
-        See <a href=videos.php>video tutorials</a>.
     ";
 }
 

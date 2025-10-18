@@ -344,67 +344,73 @@ function make_batch($desc, $user) {
     // make a temp dir for the batch
 
     @mkdir('submit');
-    $dir = sprintf('submit/%d', $batch_id);
-    @mkdir($dir);
+    $batch_dir = sprintf('submit/%d', $batch_id);
+    @mkdir($batch_dir);
 
     // unzip the input files
 
-    $dir_ligands = "$dir/ligands";
-    @mkdir($dir_ligands);
+    $ligands_dir = "$batch_dir/ligands";
+    @mkdir($ligands_dir);
     $ligands_phys = sandbox_path($user, $desc->ligands);
     if (!$ligands_phys) {
         error_page("no ligands file $desc->ligands");
     }
-    $cmd = sprintf("unzip -q %s -d %s", $ligands_phys, $dir_ligands);
+    $cmd = sprintf("unzip -q '%s' -d %s", $ligands_phys, $ligands_dir);
     //echo "ligands cmd: $cmd\n";
     $x = system($cmd, $retval);
     if ($retval && $retval != 1) {
         error_page("Command failed: $cmd: $retval; $x\n");
     }
     
-    $d = contains_single_dir($dir_ligands);
-    if ($d) $dir_ligands = "$dir_ligands/$d";
+    $d = contains_single_dir($ligands_dir);
+    if ($d) {
+        $ligands_dir = "$ligands_dir/$d";
+    }
 
-    $ligands = get_files($dir_ligands, LIGAND_TYPES, 'ligands');
+    $ligands = get_files($ligands_dir, LIGAND_TYPES, 'ligands');
     //print_r($ligands);
 
     if ($desc->scoring == 'ad4') {
-        $dir_maps = "$dir/maps";
-        @mkdir($dir_maps);
+        $maps_dir = "$batch_dir/maps";
+        @mkdir($maps_dir);
         $maps_phys = sandbox_path($user, $desc->maps);
         if (!$maps_phys) {
             error_page("no maps file $desc->maps");
         }
-        $cmd = sprintf("unzip -q %s -d %s", $maps_phys, $dir_maps);
+        $cmd = sprintf("unzip -q '%s' -d %s", $maps_phys, $maps_dir);
         //echo "maps cmd: $cmd\n";
         $x = system($cmd, $retval);
         if ($retval && $retval != 1) {
             error_page("Command failed: $cmd: $retval; $x\n");
         }
 
-        $d = contains_single_dir($dir_maps);
-        if ($d) $dir_maps = "$dir_maps/$d";
+        $d = contains_single_dir($maps_dir);
+        if ($d) {
+            $maps_dir = "$maps_dir/$d";
+        }
 
-        $maps = get_files($dir_maps, MAP_TYPES, 'maps');
+        $maps = get_files($maps_dir, MAP_TYPES, 'maps');
         //print_r($maps);
     } else {
-        $dir_receptors = "$dir/receptors";
-        @mkdir($dir_receptors);
+        $receptors_dir = "$batch_dir/receptors";
+        @mkdir($receptors_dir);
         $receptors_phys = sandbox_path($user, $desc->receptors);
         if (!$receptors_phys) {
             error_page("no receptors file $desc->receptors");
         }
-        $cmd = sprintf("unzip -q %s -d %s", $receptors_phys, $dir_receptors);
+        $cmd = sprintf("unzip -q '%s' -d %s", $receptors_phys, $receptors_dir);
         //echo "receptors cmd: $cmd\n";
         $x = system($cmd, $retval);
         if ($retval && $retval != 1) {
             error_page("Command failed: $cmd: $retval; $x\n");
         }
 
-        $d = contains_single_dir($dir_receptors);
-        if ($d) $dir_receptors = "$dir_receptors/$d";
+        $d = contains_single_dir($receptors_dir);
+        if ($d) {
+            $receptors_dir = "$receptors_dir/$d";
+        }
 
-        $receptors = get_files($dir_receptors, RECEPTOR_TYPES, 'receptors');
+        $receptors = get_files($receptors_dir, RECEPTOR_TYPES, 'receptors');
         //print_r($receptors);
     }
 
@@ -424,7 +430,7 @@ function make_batch($desc, $user) {
         }
     }
     if ($msg) {
-        bail($batch, $dir, "$msg Check your .zip files.");
+        bail($batch, $batch_dir, "$msg Check your .zip files.");
     }
 
     // make a job for each combination of ligand and receptor
@@ -450,7 +456,7 @@ function make_batch($desc, $user) {
     }
 
     if ($seqno > 10 && $user->seti_id) {
-        bail($batch, $dir,
+        bail($batch, $batch_dir,
             "Batches with > 10 jobs are not allowed if 'use only my computers' is set"
         );
     }
@@ -477,6 +483,7 @@ function make_batch($desc, $user) {
         $err = file_get_contents($errfile);
         echo "<pre>$err</pre>";
     }
+    system("rm -r $batch_dir");
     header("Location: submit.php?action=query_batch&batch_id=$batch->id");
 }
 
