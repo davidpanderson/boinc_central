@@ -78,6 +78,16 @@ function form($s, $user) {
         Scoring function: $n
         <br><a href=autodock.php>Select a different scoring function</a>
     ";
+    $us = BoincUserSubmit::lookup_userid($user->id);
+    if ($us->max_jobs_in_progress) {
+        $n = n_jobs_in_progress($user->id);
+        echo sprintf(
+            '<p>Note: you are limited to %d jobs in progress,
+            and you currently have %d, so this batch can be at most %d jobs.',
+            $us->max_jobs_in_progress, $n,
+            $us->max_jobs_in_progress - $n
+        );
+    }
     form_start("autodock.php");
     form_general('* = required fields', '');
     form_input_hidden('scoring', $s);
@@ -312,7 +322,7 @@ function make_job($batch_desc, $batch_id, $seqno, $ligand, $other) {
 //
 function bail($batch, $dir, $msg) {
     $batch->delete();
-    //@rmdir($dir);
+    system("rm -r $dir");
 
     page_head("No jobs created");
     echo $msg;
@@ -324,6 +334,15 @@ function bail($batch, $dir, $msg) {
 // input files are in user sandbox
 //
 function make_batch($desc, $user) {
+    page_head('Creating jobs');
+    echo 'This takes on the order of 1 sec per 100 jobs,
+        so for large batches it may take a while.
+        Please wait, and do not reload this page.
+        <p>
+        Unzipping directories... 
+    ';
+    ob_flush(); flush();
+        
     // make a batch
     //
     $now = time();
@@ -433,6 +452,9 @@ function make_batch($desc, $user) {
         bail($batch, $batch_dir, "$msg Check your .zip files.");
     }
 
+    echo 'Done.  <p> Creating job descriptions... ';
+    ob_flush(); flush();
+
     // make a job for each combination of ligand and receptor
     //
     $seqno = 0;
@@ -461,6 +483,24 @@ function make_batch($desc, $user) {
         );
     }
 
+    $us = BoincUserSubmit::lookup_userid($user->id);
+    if ($us->max_jobs_in_progress) {
+        $n = n_jobs_in_progress($user->id);
+        if ($n + $seqno > $us->max_jobs_in_progress) {
+            bail($batch, $batch_dir,
+                sprintf(
+                    'This batch is %d jobs, and you already have %d in-progress jobs.
+                    This would exceed your limit of %d in-progress jobs.
+                    ',
+                    $seqno, $n, $us->max_jobs_in_progress
+                )
+            );
+        }
+    }
+
+    echo "Done ($seqno jobs).<p>Creating jobs... ";
+    ob_flush(); flush();
+
     $batch->update("njobs=$seqno");
 
     $cmd = sprintf(
@@ -483,8 +523,18 @@ function make_batch($desc, $user) {
         $err = file_get_contents($errfile);
         echo "<pre>$err</pre>";
     }
+    echo 'Done.<p>Removing temp files... ';
+    ob_flush(); flush();
+
     system("rm -r $batch_dir");
-    header("Location: submit.php?action=query_batch&batch_id=$batch->id");
+    echo "
+        Done.
+        <p><p>
+        Job creation is complete.
+        <p>
+        Go to the <a href=submit.php?action=query_batch&batch_id=$batch->id>batch status page</a>.
+    ";
+    page_tail();
 }
 
 // parse form args, create batch descriptor, call make_batch()
@@ -600,7 +650,9 @@ function action($user) {
 $user = get_logged_in_user();
 $app = BoincApp::lookup("name='autodock'");
 if (!$app) error_page("no app");
-if (!has_submit_access($user, $app->id)) error_page("no app permissions");
+if (!has_submit_access($user, $app->id)) {
+    error_page("no app permissions");
+}
 
 //print_r($_GET);
 if (get_str('submit', true)) {
