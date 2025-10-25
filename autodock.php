@@ -318,14 +318,17 @@ function make_job($batch_desc, $batch_id, $seqno, $ligand, $other) {
     return "--command_line 'input.zip output.zip' $job_name.zip\n";
 }
 
-// call this if error happened after creating the batch.
+// call this if error happened after creating the batch record.
+// Delete the batch and the temp directory.
 //
 function bail($batch, $dir, $msg) {
+    echo "No jobs created:<p>";
+    echo "$msg<p>";
+    ob_flush(); flush();
+    echo "Deleting temporary files... ";
     $batch->delete();
     system("rm -r $dir");
-
-    page_head("No jobs created");
-    echo $msg;
+    echo "Done.";
     page_tail();
     exit;
 }
@@ -452,6 +455,43 @@ function make_batch($desc, $user) {
         bail($batch, $batch_dir, "$msg Check your .zip files.");
     }
 
+    echo "Done.<p>";
+    if ($desc->scoring == 'ad4') {
+        $njobs = count($ligands) * count($maps);
+        echo sprintf(
+            "%d jobs (%d ligands, %d maps)<p>",
+            $njobs, count($ligands), count($maps)
+        );
+    } else {
+        $njobs = count($ligands) * count($receptors);
+        echo sprintf(
+            "%d jobs (%d ligands, %d receptors)<p>",
+            $njobs, count($ligands), count($receptors)
+        );
+    }
+
+    if ($njobs > 10 && $user->seti_id) {
+        bail($batch, $batch_dir,
+            "Batches with > 10 jobs are not allowed if 'use only my computers' is set"
+        );
+    }
+
+    $us = BoincUserSubmit::lookup_userid($user->id);
+    if ($us->max_jobs_in_progress) {
+        $n = n_jobs_in_progress($user->id);
+        if ($n + $njobs > $us->max_jobs_in_progress) {
+            bail($batch, $batch_dir,
+                sprintf(
+                    'This batch is %d jobs, and you have %d in-progress jobs.
+                    This would exceed your limit of %d in-progress jobs.
+                    ',
+                    $njobs, $n, $us->max_jobs_in_progress
+                )
+            );
+        }
+    }
+
+
     echo 'Done.  <p> Creating job descriptions... ';
     ob_flush(); flush();
 
@@ -465,6 +505,10 @@ function make_batch($desc, $user) {
                 $cw_string .= make_job(
                     $desc, $batch_id, $seqno++, $ligand, $map
                 );
+                if ($seqno%1000 == 0) {
+                    echo "$seqno jobs done<p>\n";
+                    ob_flush(); flush();
+                }
             }
         }
     } else {
@@ -473,32 +517,15 @@ function make_batch($desc, $user) {
                 $cw_string .= make_job(
                     $desc, $batch_id, $seqno++, $ligand, $receptor
                 );
+                if ($seqno%1000 == 0) {
+                    echo "$seqno jobs done<p>\n";
+                    ob_flush(); flush();
+                }
             }
         }
     }
 
-    if ($seqno > 10 && $user->seti_id) {
-        bail($batch, $batch_dir,
-            "Batches with > 10 jobs are not allowed if 'use only my computers' is set"
-        );
-    }
-
-    $us = BoincUserSubmit::lookup_userid($user->id);
-    if ($us->max_jobs_in_progress) {
-        $n = n_jobs_in_progress($user->id);
-        if ($n + $seqno > $us->max_jobs_in_progress) {
-            bail($batch, $batch_dir,
-                sprintf(
-                    'This batch is %d jobs, and you already have %d in-progress jobs.
-                    This would exceed your limit of %d in-progress jobs.
-                    ',
-                    $seqno, $n, $us->max_jobs_in_progress
-                )
-            );
-        }
-    }
-
-    echo "Done ($seqno jobs).<p>Creating jobs... ";
+    echo "Done ($njobs jobs).<p>Creating jobs... ";
     ob_flush(); flush();
 
     $batch->update("njobs=$seqno");
