@@ -16,13 +16,13 @@ function form() {
 
 function action($user) {
     $subject = 'BOINC Central application';
-    $body = sprintf('User: %s (%d)
+    $body = sprintf('User: %s %s (%d)
     institution: %s
     URL: %s
     research: %s
     heard about us from: %s
 ',
-        $user->email_addr, $user->id,
+        $user->name, $user->email_addr, $user->id,
         get_str('institution', true),
         get_str('url', true),
         get_str('research', true),

@@ -28,23 +28,6 @@ define('MAP_TYPES', ['.map', '.glg', '.gpf', '.fld', '.xyz', '.pdbqt']);
 define('LIGAND_TYPES', ['.pdbqt']);
 define('RECEPTOR_TYPES', ['.pdbqt']);
 
-// if the directory contains a single item, and it's a dir, return its name.
-//
-function contains_single_dir($dir) {
-    $items = scandir($dir);
-    $child = null;
-    foreach ($items as $f) {
-        if ($f[0] == '.') continue;
-        if (is_dir("$dir/$f")) {
-            if ($child) return null;
-            $child = $f;
-        } else {
-            return null;
-        }
-    }
-    return $child;
-}
-
 function small_line($msg) {
     return "<br><small>$msg</small>";
 }
